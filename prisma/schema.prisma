@@ -1,0 +1,70 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Produk {
+  id          String             @id @default(cuid())
+  nama        String
+  supplierId  String
+  supplier    Supplier           @relation(fields: [supplierId], references: [id])
+  hargaModal  Int
+  stok        Int                @default(0)
+  fotoUrl     String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  items       PesananItem[]
+  paketItems  PesananPaketItem[]
+}
+
+model Supplier {
+  id     String   @id @default(cuid())
+  nama   String
+  kontak String?
+  produk Produk[]
+}
+
+model Pesanan {
+  id           String         @id @default(cuid())
+  namaCustomer String
+  noHp         String?
+  items        PesananItem[]
+  pakets       PesananPaket[]
+  status       String         @default("baru") // baru, diproses, dikirim, selesai
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model PesananItem {
+  id        String  @id @default(cuid())
+  pesananId String
+  pesanan   Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  produkId  String
+  produk    Produk  @relation(fields: [produkId], references: [id])
+  jumlah    Int
+  hargaSaat Int // snapshot harga jual saat transaksi
+}
+
+// A bundle line within an order: several products combined, sold at one price.
+model PesananPaket {
+  id        String             @id @default(cuid())
+  pesananId String
+  pesanan   Pesanan            @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  nama      String             @default("Paket")
+  harga     Int // bundle selling price for the whole paket
+  komponen  PesananPaketItem[]
+}
+
+model PesananPaketItem {
+  id       String       @id @default(cuid())
+  paketId  String
+  paket    PesananPaket @relation(fields: [paketId], references: [id], onDelete: Cascade)
+  produkId String
+  produk   Produk       @relation(fields: [produkId], references: [id])
+  pcs      Int // how many pcs of this product are in the paket
+}

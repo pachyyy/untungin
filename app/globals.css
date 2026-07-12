@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-success: #16a34a;
+  --color-warning: #f59e0b;
+  --color-bg: #f8fafc;
+  --color-ink: #0f172a;
+  --color-muted: #64748b;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Prevent iOS zoom on input focus by keeping font-size >= 16px handled inline;
+   this is a safety net. */
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
