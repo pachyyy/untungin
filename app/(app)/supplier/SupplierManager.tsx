@@ -60,7 +60,7 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
                 )}
                 <button
                   onClick={() => setConfirmDel(s)}
-                  className="text-xs font-medium text-red-500 hover:underline"
+                  className="text-xs font-medium text-destructive hover:underline"
                 >
                   Hapus
                 </button>
@@ -160,7 +160,7 @@ function FormModal({
           />
         </div>
         {error && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
@@ -208,7 +208,7 @@ function DeleteModal({
         <span className="font-semibold text-ink">{row?.nama}</span>?
       </p>
       {error && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}

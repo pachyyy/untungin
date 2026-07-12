@@ -2,31 +2,101 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
-  --color-success: #16a34a;
-  --color-warning: #f59e0b;
-  --color-bg: #f8fafc;
-  --color-ink: #0f172a;
-  --color-muted: #64748b;
+@layer base {
+  :root {
+    /* shadcn HSL theme tokens (values are raw "H S% L%" for hsl(var(--x))) */
+    --background: 210 40% 98%; /* #F8FAFC */
+    --foreground: 222 47% 11%; /* #0F172A */
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 221 83% 53%; /* #2563EB */
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 221 83% 48%; /* #1D4ED8 */
+
+    --secondary: 210 40% 96%; /* slate-100 */
+    --secondary-foreground: 222 47% 11%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --success: 142 71% 45%; /* #16A34A */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%; /* #F59E0B */
+    --warning-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 51%; /* red-600 */
+    --destructive-foreground: 0 0% 100%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%; /* slate-500 */
+
+    --border: 214 32% 91%; /* slate-200 */
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
+
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: 222 47% 9%; /* deep slate */
+    --foreground: 210 40% 98%;
+
+    --card: 222 47% 12%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222 47% 12%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 217 91% 60%; /* brighter blue for dark */
+    --primary-foreground: 0 0% 100%;
+    --primary-dark: 217 91% 54%;
+
+    --secondary: 217 33% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: 217 33% 18%;
+    --accent-foreground: 210 40% 98%;
+
+    --success: 142 69% 48%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 52%;
+    --warning-foreground: 20 40% 12%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --muted: 217 33% 18%;
+    --muted-foreground: 215 20% 65%;
+
+    --border: 217 33% 22%;
+    --input: 217 33% 22%;
+    --ring: 217 91% 60%;
+  }
 }
 
-html {
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  background-color: var(--color-bg);
-  color: var(--color-ink);
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Prevent iOS zoom on input focus by keeping font-size >= 16px handled inline;
-   this is a safety net. */
-input,
-select,
-textarea,
-button {
-  font-family: inherit;
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    -webkit-tap-highlight-color: transparent;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  input,
+  select,
+  textarea,
+  button {
+    font-family: inherit;
+  }
 }

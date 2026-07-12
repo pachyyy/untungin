@@ -88,7 +88,7 @@ export function PesananManager({
               "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold capitalize transition " +
               (filter === f
                 ? "bg-primary text-white"
-                : "bg-white text-muted border border-slate-200")
+                : "bg-card text-muted-foreground border border-border")
             }
           >
             {f === "semua" ? "Semua" : STATUS_LABEL[f as Status]}
@@ -195,7 +195,7 @@ function PesananCard({
           </li>
         ))}
         {p.pakets.map((pk) => (
-          <li key={pk.id} className="rounded-lg bg-slate-50 px-2 py-1.5">
+          <li key={pk.id} className="rounded-lg bg-secondary px-2 py-1.5">
             <div className="flex justify-between gap-2">
               <span className="min-w-0 truncate font-medium text-ink">
                 <span className="mr-1 rounded bg-primary/10 px-1 text-[10px] font-bold uppercase text-primary">
@@ -212,7 +212,7 @@ function PesananCard({
         ))}
       </ul>
 
-      <div className="flex items-center justify-between border-t border-slate-100 pt-2 text-sm">
+      <div className="flex items-center justify-between border-t border-border pt-2 text-sm">
         <span className="font-semibold text-ink">
           Total {formatRupiah(total)}
         </span>
@@ -236,7 +236,7 @@ function PesananCard({
         </Select>
         <button
           onClick={onDelete}
-          className="rounded-lg px-2 py-1 text-sm font-medium text-red-500 hover:bg-red-50"
+          className="rounded-lg px-2 py-1 text-sm font-medium text-destructive hover:bg-destructive/10"
         >
           Hapus
         </button>
@@ -436,7 +436,7 @@ function NewPesananModal({
             </div>
 
             {items.length === 0 && (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-muted">
+              <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
                 Belum ada item satuan.
               </p>
             )}
@@ -447,7 +447,7 @@ function NewPesananModal({
                 return (
                   <div
                     key={idx}
-                    className="rounded-xl border border-slate-200 p-2"
+                    className="rounded-xl border border-border p-2"
                   >
                     <div className="flex gap-2">
                       <Select
@@ -466,7 +466,7 @@ function NewPesananModal({
                       <button
                         type="button"
                         onClick={() => removeItem(idx)}
-                        className="px-1 text-red-500"
+                        className="px-1 text-destructive"
                         aria-label="Hapus item"
                       >
                         ✕
@@ -536,7 +536,7 @@ function NewPesananModal({
             </div>
 
             {pakets.length === 0 && (
-              <p className="rounded-lg bg-slate-50 px-3 py-2 text-sm text-muted">
+              <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
                 Belum ada paket. Gabungkan beberapa produk jadi satu harga.
               </p>
             )}
@@ -558,7 +558,7 @@ function NewPesananModal({
                       <button
                         type="button"
                         onClick={() => removePaket(pi)}
-                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50"
+                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
                       >
                         Hapus paket
                       </button>
@@ -602,7 +602,7 @@ function NewPesananModal({
                               type="button"
                               onClick={() => removeKomp(pi, ki)}
                               disabled={pk.komponen.length === 1}
-                              className="px-1 text-red-500 disabled:opacity-30"
+                              className="px-1 text-destructive disabled:opacity-30"
                               aria-label="Hapus komponen"
                             >
                               ✕
@@ -650,7 +650,7 @@ function NewPesananModal({
           </div>
 
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {error}
             </p>
           )}

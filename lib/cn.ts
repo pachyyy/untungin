@@ -1,4 +1,3 @@
-/** Tiny className joiner (no dependency). Filters falsy values. */
-export function cn(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(" ");
-}
+// Re-export from utils so both `@/lib/cn` (legacy) and `@/lib/utils` (shadcn
+// convention) resolve to the same tailwind-merge-aware combiner.
+export { cn } from "@/lib/utils";

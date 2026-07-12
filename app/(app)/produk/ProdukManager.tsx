@@ -79,14 +79,14 @@ export function ProdukManager({
                       "rounded-full px-2 py-0.5 text-xs font-bold " +
                       (low
                         ? "bg-warning/10 text-warning"
-                        : "bg-slate-100 text-slate-600")
+                        : "bg-secondary text-secondary-foreground")
                     }
                   >
                     Stok {p.stok}
                   </span>
                   <button
                     onClick={() => setConfirmDel(p)}
-                    className="text-xs font-medium text-red-500 hover:underline"
+                    className="text-xs font-medium text-destructive hover:underline"
                   >
                     Hapus
                   </button>
@@ -227,7 +227,7 @@ function ProdukFormModal({
         </div>
 
         {addingSupplier && (
-          <div className="space-y-3 rounded-xl bg-slate-50 p-3">
+          <div className="space-y-3 rounded-xl bg-secondary p-3">
             <div>
               <Label htmlFor="supplierNama">Nama supplier baru</Label>
               <Input
@@ -248,7 +248,7 @@ function ProdukFormModal({
         )}
 
         {error && (
-          <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}
           </p>
         )}
@@ -303,7 +303,7 @@ function DeleteModal({
         tidak bisa dibatalkan.
       </p>
       {error && (
-        <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+        <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
           {error}
         </p>
       )}
