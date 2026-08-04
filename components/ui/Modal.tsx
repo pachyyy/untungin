@@ -34,6 +34,14 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
         />
         <DialogPrimitive.Content
           onOpenAutoFocus={(e) => e.preventDefault()}
+          // Don't let a Radix popover/combobox (portaled outside the dialog)
+          // dismiss the dialog when interacted with.
+          onInteractOutside={(e) => {
+            const target = e.target as Element | null;
+            if (target?.closest("[data-radix-popper-content-wrapper]")) {
+              e.preventDefault();
+            }
+          }}
           className={cn(
             // mobile: bottom sheet
             "fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-card p-4 text-card-foreground shadow-xl",

@@ -1,22 +1,32 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { formatRupiah } from "@/lib/format";
 import {
   createSupplier,
   updateSupplier,
   deleteSupplier,
 } from "@/lib/actions/supplier";
 
+type SupplierProduk = {
+  id: string;
+  nama: string;
+  stok: number;
+  hargaModal: number;
+};
+
 type SupplierRow = {
   id: string;
   nama: string;
   kontak: string | null;
   jumlahProduk: number;
+  produk: SupplierProduk[];
 };
 
 export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
@@ -24,16 +34,35 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
   const [editing, setEditing] = useState<SupplierRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState<SupplierRow | null>(null);
+  const [query, setQuery] = useState("");
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return suppliers;
+    return suppliers.filter(
+      (s) =>
+        s.nama.toLowerCase().includes(q) ||
+        (s.kontak ?? "").toLowerCase().includes(q)
+    );
+  }, [suppliers, query]);
 
   return (
     <div className="p-4">
-      {suppliers.length === 0 ? (
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Cari nama atau kontak…"
+        className="mb-3"
+      />
+      {shown.length === 0 ? (
         <Card className="text-center text-sm text-muted">
-          Belum ada supplier.
+          {suppliers.length === 0
+            ? "Belum ada supplier."
+            : "Tidak ada supplier yang cocok."}
         </Card>
       ) : (
         <div className="space-y-2">
-          {suppliers.map((s) => (
+          {shown.map((s) => (
             <Card key={s.id} className="flex items-center justify-between gap-3">
               <button
                 onClick={() => {
@@ -159,6 +188,28 @@ function FormModal({
             placeholder="08xxxxxxxxxx"
           />
         </div>
+        {editing && (
+          <div>
+            <Label>Produk ({editing.produk.length})</Label>
+            {editing.produk.length === 0 ? (
+              <p className="text-sm text-muted">Belum ada produk.</p>
+            ) : (
+              <div className="max-h-48 space-y-1 overflow-y-auto rounded-lg border border-border">
+                {editing.produk.map((p) => (
+                  <div
+                    key={p.id}
+                    className="flex items-center justify-between gap-3 border-b border-border px-3 py-2 text-sm last:border-b-0"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-ink">{p.nama}</span>
+                    <span className="shrink-0 text-muted">
+                      {p.stok} stok · {formatRupiah(p.hargaModal)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         {error && (
           <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
             {error}

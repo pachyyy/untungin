@@ -4,9 +4,30 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input, Label, Select } from "@/components/ui/Input";
+import { Input, Label } from "@/components/ui/Input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/Select";
+import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
+import { SearchInput } from "@/components/ui/SearchInput";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import {
+  Popover,
+  PopoverAnchor,
+  PopoverContent,
+} from "@/components/ui/Popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/Command";
 import { formatRupiah } from "@/lib/format";
 import {
   STATUS_LIST,
@@ -15,14 +36,17 @@ import {
   untungPesanan,
   type Status,
 } from "@/lib/calc";
+import { Pencil } from "lucide-react";
 import {
   createPesanan,
+  updatePesanan,
   updateStatus,
   deletePesanan,
 } from "@/lib/actions/pesanan";
 
 type ItemRow = {
   id: string;
+  produkId: string;
   nama: string;
   jumlah: number;
   hargaSaat: number;
@@ -30,6 +54,7 @@ type ItemRow = {
 };
 type PaketKomponenRow = {
   id: string;
+  produkId: string;
   nama: string;
   pcs: number;
   produk: { hargaModal: number };
@@ -50,34 +75,69 @@ type PesananRow = {
   pakets: PaketRow[];
 };
 type ProdukOpt = { id: string; nama: string; stok: number };
+type CustomerOpt = { id: string; nama: string; noHp: string | null };
 
 const FILTERS = ["semua", ...STATUS_LIST] as const;
 
 export function PesananManager({
   pesanan,
   produk,
+  customers,
   openNew,
 }: {
   pesanan: PesananRow[];
   produk: ProdukOpt[];
+  customers: CustomerOpt[];
   openNew: boolean;
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("semua");
+  const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<PesananRow | null>(null);
   const [confirmDel, setConfirmDel] = useState<PesananRow | null>(null);
 
   useEffect(() => {
-    if (openNew) setFormOpen(true);
+    if (openNew) {
+      setEditingOrder(null);
+      setFormOpen(true);
+    }
   }, [openNew]);
 
-  const shown = useMemo(
-    () => (filter === "semua" ? pesanan : pesanan.filter((p) => p.status === filter)),
-    [filter, pesanan]
-  );
+  function openNewForm() {
+    setEditingOrder(null);
+    setFormOpen(true);
+  }
+  function openEditForm(order: PesananRow) {
+    setEditingOrder(order);
+    setFormOpen(true);
+  }
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return pesanan.filter((p) => {
+      if (filter !== "semua" && p.status !== filter) return false;
+      if (!q) return true;
+      const namaMatch = p.namaCustomer.toLowerCase().includes(q);
+      const hpMatch = (p.noHp ?? "").toLowerCase().includes(q);
+      const itemMatch = p.items.some((it) => it.nama.toLowerCase().includes(q));
+      const paketMatch = p.pakets.some(
+        (pk) =>
+          pk.nama.toLowerCase().includes(q) ||
+          pk.komponen.some((k) => k.nama.toLowerCase().includes(q))
+      );
+      return namaMatch || hpMatch || itemMatch || paketMatch;
+    });
+  }, [filter, query, pesanan]);
 
   return (
     <div className="p-4">
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Cari customer, no. HP, atau produk…"
+        className="mb-3"
+      />
       {/* Filter tabs */}
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
         {FILTERS.map((f) => (
@@ -98,7 +158,9 @@ export function PesananManager({
 
       {shown.length === 0 ? (
         <Card className="text-center text-sm text-muted">
-          Tidak ada pesanan{filter !== "semua" ? " dengan status ini" : ""}.
+          Tidak ada pesanan
+          {filter !== "semua" ? " dengan status ini" : ""}
+          {query.trim() ? " yang cocok" : ""}.
         </Card>
       ) : (
         <div className="space-y-3">
@@ -106,6 +168,7 @@ export function PesananManager({
             <PesananCard
               key={p.id}
               p={p}
+              onEdit={() => openEditForm(p)}
               onDelete={() => setConfirmDel(p)}
               onChanged={() => router.refresh()}
             />
@@ -114,7 +177,7 @@ export function PesananManager({
       )}
 
       <button
-        onClick={() => setFormOpen(true)}
+        onClick={openNewForm}
         className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 active:scale-95"
         aria-label="Tambah pesanan"
       >
@@ -123,10 +186,12 @@ export function PesananManager({
         </svg>
       </button>
 
-      <NewPesananModal
-        key={formOpen ? "open" : "closed"}
+      <PesananFormModal
+        key={`${editingOrder?.id ?? "new"}-${formOpen}`}
         open={formOpen}
+        editing={editingOrder}
         produk={produk}
+        customers={customers}
         onClose={() => setFormOpen(false)}
         onDone={() => {
           setFormOpen(false);
@@ -148,10 +213,12 @@ export function PesananManager({
 
 function PesananCard({
   p,
+  onEdit,
   onDelete,
   onChanged,
 }: {
   p: PesananRow;
+  onEdit: () => void;
   onDelete: () => void;
   onChanged: () => void;
 }) {
@@ -180,7 +247,17 @@ function PesananCard({
             {p.noHp ? ` · ${p.noHp}` : ""}
           </p>
         </div>
-        <StatusBadge status={p.status} />
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label="Edit pesanan"
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
+          <StatusBadge status={p.status} />
+        </div>
       </div>
 
       <ul className="space-y-1 text-sm">
@@ -223,16 +300,20 @@ function PesananCard({
 
       <div className="flex items-center gap-2">
         <Select
-          className="h-9 flex-1 text-sm"
           value={p.status}
           disabled={pending}
-          onChange={(e) => changeStatus(e.target.value)}
+          onValueChange={(v) => changeStatus(v)}
         >
-          {STATUS_LIST.map((s) => (
-            <option key={s} value={s}>
-              {STATUS_LABEL[s]}
-            </option>
-          ))}
+          <SelectTrigger className="h-9 flex-1 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {STATUS_LIST.map((s) => (
+              <SelectItem key={s} value={s}>
+                {STATUS_LABEL[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
         </Select>
         <button
           onClick={onDelete}
@@ -249,24 +330,53 @@ type DraftItem = { produkId: string; jumlah: number; harga: string };
 type DraftKomp = { produkId: string; pcs: number };
 type DraftPaket = { nama: string; harga: string; komponen: DraftKomp[] };
 
-function NewPesananModal({
+function PesananFormModal({
   open,
+  editing,
   produk,
+  customers,
   onClose,
   onDone,
 }: {
   open: boolean;
+  editing: PesananRow | null;
   produk: ProdukOpt[];
+  customers: CustomerOpt[];
   onClose: () => void;
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
-  const [items, setItems] = useState<DraftItem[]>([]);
-  const [pakets, setPakets] = useState<DraftPaket[]>([]);
+  const [namaCustomer, setNamaCustomer] = useState(editing?.namaCustomer ?? "");
+  const [noHp, setNoHp] = useState(editing?.noHp ?? "");
+  const [items, setItems] = useState<DraftItem[]>(() =>
+    editing
+      ? editing.items.map((it) => ({
+          produkId: it.produkId,
+          jumlah: it.jumlah,
+          harga: String(it.hargaSaat),
+        }))
+      : []
+  );
+  const [pakets, setPakets] = useState<DraftPaket[]>(() =>
+    editing
+      ? editing.pakets.map((pk) => ({
+          nama: pk.nama,
+          harga: String(pk.harga),
+          komponen: pk.komponen.map((k) => ({
+            produkId: k.produkId,
+            pcs: k.pcs,
+          })),
+        }))
+      : []
+  );
 
   const produkMap = useMemo(
     () => new Map(produk.map((p) => [p.id, p])),
+    [produk]
+  );
+  const produkOptions = useMemo(
+    () => produk.map((p) => ({ value: p.id, label: p.nama })),
     [produk]
   );
 
@@ -389,15 +499,22 @@ function NewPesananModal({
 
     formData.set("items", JSON.stringify(cleanItems));
     formData.set("pakets", JSON.stringify(cleanPakets));
+    if (editing) formData.set("id", editing.id);
     startTransition(async () => {
-      const res = await createPesanan(formData);
+      const res = editing
+        ? await updatePesanan(formData)
+        : await createPesanan(formData);
       if (res.ok) onDone();
       else setError(res.error);
     });
   }
 
   return (
-    <Modal open={open} onClose={onClose} title="Pesanan Baru">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title={editing ? "Edit Pesanan" : "Pesanan Baru"}
+    >
       {produk.length === 0 ? (
         <p className="text-sm text-muted">
           Belum ada produk. Tambahkan produk dulu sebelum membuat pesanan.
@@ -406,11 +523,14 @@ function NewPesananModal({
         <form action={handleSubmit} className="space-y-3">
           <div>
             <Label htmlFor="namaCustomer">Nama customer</Label>
-            <Input
-              id="namaCustomer"
-              name="namaCustomer"
-              placeholder="Nama pembeli"
-              required
+            <input type="hidden" name="namaCustomer" value={namaCustomer} />
+            <CustomerCombobox
+              customers={customers}
+              value={namaCustomer}
+              onChange={(nama, hp) => {
+                setNamaCustomer(nama);
+                if (hp !== undefined) setNoHp(hp ?? "");
+              }}
             />
           </div>
           <div>
@@ -420,6 +540,8 @@ function NewPesananModal({
               name="noHp"
               inputMode="tel"
               placeholder="08xxxxxxxxxx"
+              value={noHp}
+              onChange={(e) => setNoHp(e.target.value)}
             />
           </div>
 
@@ -450,19 +572,15 @@ function NewPesananModal({
                     className="rounded-xl border border-border p-2"
                   >
                     <div className="flex gap-2">
-                      <Select
+                      <Combobox
                         className="h-10 flex-1 text-sm"
+                        options={produkOptions}
                         value={it.produkId}
-                        onChange={(e) =>
-                          updateItem(idx, { produkId: e.target.value })
-                        }
-                      >
-                        {produk.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.nama}
-                          </option>
-                        ))}
-                      </Select>
+                        onChange={(v) => updateItem(idx, { produkId: v })}
+                        placeholder="Pilih produk"
+                        searchPlaceholder="Cari produk…"
+                        emptyText="Produk tidak ditemukan."
+                      />
                       <button
                         type="button"
                         onClick={() => removeItem(idx)}
@@ -569,19 +687,17 @@ function NewPesananModal({
                         const pr = produkMap.get(k.produkId);
                         return (
                           <div key={ki} className="flex items-center gap-2">
-                            <Select
+                            <Combobox
                               className="h-9 flex-1 text-sm"
+                              options={produkOptions}
                               value={k.produkId}
-                              onChange={(e) =>
-                                updateKomp(pi, ki, { produkId: e.target.value })
+                              onChange={(v) =>
+                                updateKomp(pi, ki, { produkId: v })
                               }
-                            >
-                              {produk.map((p) => (
-                                <option key={p.id} value={p.id}>
-                                  {p.nama}
-                                </option>
-                              ))}
-                            </Select>
+                              placeholder="Pilih produk"
+                              searchPlaceholder="Cari produk…"
+                              emptyText="Produk tidak ditemukan."
+                            />
                             <Input
                               className="h-9 w-14 text-center text-sm"
                               inputMode="numeric"
@@ -671,6 +787,106 @@ function NewPesananModal({
         </form>
       )}
     </Modal>
+  );
+}
+
+function CustomerCombobox({
+  customers,
+  value,
+  onChange,
+}: {
+  customers: CustomerOpt[];
+  value: string;
+  onChange: (nama: string, noHp?: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState(value);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return customers;
+    return customers.filter((c) => c.nama.toLowerCase().includes(q));
+  }, [customers, search]);
+
+  const exactMatch = customers.some(
+    (c) => c.nama.toLowerCase() === search.trim().toLowerCase()
+  );
+
+  function close() {
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverAnchor asChild>
+        <Input
+          id="namaCustomer"
+          placeholder="Nama pembeli"
+          value={search}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSearch(v);
+            onChange(v);
+            setOpen(true);
+          }}
+          onBlur={() => {
+            // Let a click on the popover content (e.g. selecting an item)
+            // register before we close.
+            setTimeout(close, 150);
+          }}
+          autoComplete="off"
+          required
+        />
+      </PopoverAnchor>
+      <PopoverContent
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="p-0"
+      >
+        <Command>
+          <CommandList>
+            <CommandEmpty>
+              {search.trim() ? "Pelanggan baru akan dibuat." : "Ketik nama pelanggan."}
+            </CommandEmpty>
+            <CommandGroup>
+              {filtered.map((c) => (
+                <CommandItem
+                  key={c.id}
+                  value={c.nama}
+                  onSelect={() => {
+                    onChange(c.nama, c.noHp);
+                    setSearch(c.nama);
+                    setOpen(false);
+                  }}
+                >
+                  <span className="line-clamp-1">{c.nama}</span>
+                  {c.noHp && (
+                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                      {c.noHp}
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+          {search.trim() && !exactMatch && (
+            <div className="border-t border-border p-1">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange(search.trim());
+                  setSearch(search.trim());
+                  setOpen(false);
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-primary hover:bg-primary/10"
+              >
+                Pakai &quot;{search.trim()}&quot; (baru)
+              </button>
+            </div>
+          )}
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
 

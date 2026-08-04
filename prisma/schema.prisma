@@ -33,11 +33,23 @@ model Pesanan {
   id           String         @id @default(cuid())
   namaCustomer String
   noHp         String?
+  customerId   String?
+  customer     Customer?      @relation(fields: [customerId], references: [id])
   items        PesananItem[]
   pakets       PesananPaket[]
   status       String         @default("baru") // baru, diproses, dikirim, selesai
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+model Customer {
+  id        String    @id @default(cuid())
+  nama      String    @unique
+  noHp      String?
+  catatan   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  pesanan   Pesanan[]
 }
 
 model PesananItem {

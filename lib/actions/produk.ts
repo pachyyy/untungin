@@ -75,7 +75,11 @@ export async function deleteProduk(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
   if (!id) return { ok: false, error: "Produk tidak ditemukan." };
 
-  const used = await prisma.pesananItem.count({ where: { produkId: id } });
+  const [usedItem, usedPaket] = await Promise.all([
+    prisma.pesananItem.count({ where: { produkId: id } }),
+    prisma.pesananPaketItem.count({ where: { produkId: id } }),
+  ]);
+  const used = usedItem + usedPaket;
   if (used > 0) {
     return {
       ok: false,

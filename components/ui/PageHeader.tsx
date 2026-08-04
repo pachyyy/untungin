@@ -1,6 +1,3 @@
-import { LogOut } from "lucide-react";
-import { logoutAction } from "@/lib/actions/auth";
-
 export function PageHeader({
   title,
   subtitle,
@@ -19,18 +16,7 @@ export function PageHeader({
           </h1>
           {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {action}
-          <form action={logoutAction}>
-            <button
-              type="submit"
-              title="Keluar"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            >
-              <LogOut className="h-5 w-5" />
-            </button>
-          </form>
-        </div>
+        {action && <div className="flex shrink-0 items-center gap-2">{action}</div>}
       </div>
     </header>
   );

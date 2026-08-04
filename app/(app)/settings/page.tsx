@@ -1,5 +1,8 @@
+import { LogOut } from "lucide-react";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { logoutAction } from "@/lib/actions/auth";
 import { ThemeToggle } from "./ThemeToggle";
 
 export const metadata = { title: "Pengaturan · Untungin" };
@@ -25,6 +28,13 @@ export default function SettingsPage() {
             Untungin — kelola produk, pesanan, dan untung bisnis resellermu.
           </p>
         </Card>
+
+        <form action={logoutAction}>
+          <Button type="submit" variant="outline" className="w-full">
+            <LogOut className="h-5 w-5" />
+            Keluar
+          </Button>
+        </form>
       </div>
     </div>
   );

@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Input, Label, Select } from "@/components/ui/Input";
+import { Input, Label } from "@/components/ui/Input";
+import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
+import { SearchInput } from "@/components/ui/SearchInput";
+import { Plus } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import { createProduk, updateProduk, deleteProduk } from "@/lib/actions/produk";
 
@@ -32,6 +35,17 @@ export function ProdukManager({
   const [editing, setEditing] = useState<ProdukRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState<ProdukRow | null>(null);
+  const [query, setQuery] = useState("");
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return produk;
+    return produk.filter(
+      (p) =>
+        p.nama.toLowerCase().includes(q) ||
+        p.supplierNama.toLowerCase().includes(q)
+    );
+  }, [produk, query]);
 
   useEffect(() => {
     if (openNew) {
@@ -51,13 +65,21 @@ export function ProdukManager({
 
   return (
     <div className="p-4">
-      {produk.length === 0 ? (
+      <SearchInput
+        value={query}
+        onChange={setQuery}
+        placeholder="Cari nama produk atau supplier…"
+        className="mb-3"
+      />
+      {shown.length === 0 ? (
         <Card className="text-center text-sm text-muted">
-          Belum ada produk. Tambahkan produk pertamamu.
+          {produk.length === 0
+            ? "Belum ada produk. Tambahkan produk pertamamu."
+            : "Tidak ada produk yang cocok."}
         </Card>
       ) : (
         <div className="space-y-2">
-          {produk.map((p) => {
+          {shown.map((p) => {
             const low = p.stok < 5;
             return (
               <Card key={p.id} className="flex items-center justify-between gap-3">
@@ -210,20 +232,33 @@ function ProdukFormModal({
         </p>
 
         <div>
-          <Label htmlFor="supplierId">Supplier</Label>
-          <Select
-            id="supplierId"
-            name="supplierId"
-            value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
-          >
-            {suppliers.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.nama}
-              </option>
-            ))}
-            <option value="__new__">+ Tambah supplier baru</option>
-          </Select>
+          <Label>Supplier</Label>
+          <input type="hidden" name="supplierId" value={supplierId} />
+          <Combobox
+            options={suppliers.map((s) => ({ value: s.id, label: s.nama }))}
+            value={supplierId === "__new__" ? "" : supplierId}
+            onChange={(v) => setSupplierId(v)}
+            placeholder={
+              supplierId === "__new__"
+                ? "Supplier baru (isi di bawah)"
+                : "Pilih supplier"
+            }
+            searchPlaceholder="Cari supplier…"
+            emptyText="Supplier tidak ditemukan."
+            footer={({ close }) => (
+              <button
+                type="button"
+                onClick={() => {
+                  setSupplierId("__new__");
+                  close();
+                }}
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-primary hover:bg-primary/10"
+              >
+                <Plus className="h-4 w-4" />
+                Tambah supplier baru
+              </button>
+            )}
+          />
         </div>
 
         {addingSupplier && (

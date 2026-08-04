@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { STATUS_LIST, isCommitted, type Status } from "@/lib/calc";
 import type { ActionResult } from "@/lib/actions/supplier";
+import { resolveCustomerId } from "@/lib/actions/customer";
 
 type ItemInput = { produkId: string; jumlah: number; hargaSaat: number };
 type PaketKomponenInput = { produkId: string; pcs: number };
@@ -106,36 +107,143 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
       return { ok: false, error: "Ada produk yang tidak valid." };
   }
 
-  await prisma.pesanan.create({
-    data: {
-      namaCustomer,
-      noHp: noHp || null,
-      status: "baru",
-      items: {
-        create: items.map((it) => ({
-          produkId: it.produkId,
-          jumlah: it.jumlah,
-          hargaSaat: it.hargaSaat, // selling price entered per order
-        })),
+  await prisma.$transaction(async (tx) => {
+    const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
+    await tx.pesanan.create({
+      data: {
+        namaCustomer,
+        noHp: noHp || null,
+        customerId,
+        status: "baru",
+        items: {
+          create: items.map((it) => ({
+            produkId: it.produkId,
+            jumlah: it.jumlah,
+            hargaSaat: it.hargaSaat, // selling price entered per order
+          })),
+        },
+        pakets: {
+          create: pakets.map((pk) => ({
+            nama: pk.nama,
+            harga: pk.harga,
+            komponen: {
+              create: pk.komponen.map((k) => ({
+                produkId: k.produkId,
+                pcs: k.pcs,
+              })),
+            },
+          })),
+        },
       },
-      pakets: {
-        create: pakets.map((pk) => ({
-          nama: pk.nama,
-          harga: pk.harga,
-          komponen: {
-            create: pk.komponen.map((k) => ({
-              produkId: k.produkId,
-              pcs: k.pcs,
-            })),
-          },
-        })),
-      },
-    },
+    });
   });
 
   revalidatePath("/pesanan");
   revalidatePath("/dashboard");
   revalidatePath("/laporan");
+  revalidatePath("/pelanggan");
+  return { ok: true };
+}
+
+export async function updatePesanan(formData: FormData): Promise<ActionResult> {
+  const id = String(formData.get("id") ?? "");
+  const namaCustomer = String(formData.get("namaCustomer") ?? "").trim();
+  const noHp = String(formData.get("noHp") ?? "").trim();
+  const items = parseItems(formData.get("items"));
+  const pakets = parsePakets(formData.get("pakets"));
+
+  if (!id) return { ok: false, error: "Pesanan tidak ditemukan." };
+  if (!namaCustomer) return { ok: false, error: "Nama customer wajib diisi." };
+  if (items.length === 0 && pakets.length === 0)
+    return {
+      ok: false,
+      error: "Tambahkan minimal satu item satuan atau satu paket.",
+    };
+
+  const referenced = new Set<string>();
+  items.forEach((it) => referenced.add(it.produkId));
+  pakets.forEach((pk) => pk.komponen.forEach((k) => referenced.add(k.produkId)));
+
+  const produkList = await prisma.produk.findMany({
+    where: { id: { in: [...referenced] } },
+    select: { id: true },
+  });
+  const validIds = new Set(produkList.map((p) => p.id));
+  for (const rid of referenced) {
+    if (!validIds.has(rid))
+      return { ok: false, error: "Ada produk yang tidak valid." };
+  }
+
+  const existing = await prisma.pesanan.findUnique({
+    where: { id },
+    include: { items: true, pakets: { include: { komponen: true } } },
+  });
+  if (!existing) return { ok: false, error: "Pesanan tidak ditemukan." };
+
+  const committed = isCommitted(existing.status);
+  const oldNeeds = stockNeeds(existing);
+  const newNeeds = stockNeeds({
+    items,
+    pakets: pakets.map((pk) => ({ komponen: pk.komponen })),
+  });
+
+  await prisma.$transaction(async (tx) => {
+    const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
+
+    // Replace all lines.
+    await tx.pesananItem.deleteMany({ where: { pesananId: id } });
+    await tx.pesananPaket.deleteMany({ where: { pesananId: id } }); // cascades komponen
+    await tx.pesanan.update({
+      where: { id },
+      data: {
+        namaCustomer,
+        noHp: noHp || null,
+        customerId,
+        items: {
+          create: items.map((it) => ({
+            produkId: it.produkId,
+            jumlah: it.jumlah,
+            hargaSaat: it.hargaSaat,
+          })),
+        },
+        pakets: {
+          create: pakets.map((pk) => ({
+            nama: pk.nama,
+            harga: pk.harga,
+            komponen: {
+              create: pk.komponen.map((k) => ({
+                produkId: k.produkId,
+                pcs: k.pcs,
+              })),
+            },
+          })),
+        },
+      },
+    });
+
+    // Reconcile stock only if the order is (and stays) committed: return old, deduct new.
+    if (committed) {
+      const products = new Set<string>([
+        ...oldNeeds.keys(),
+        ...newNeeds.keys(),
+      ]);
+      for (const pid of products) {
+        const net = (oldNeeds.get(pid) ?? 0) - (newNeeds.get(pid) ?? 0);
+        if (net !== 0) {
+          await tx.produk.update({
+            where: { id: pid },
+            data: { stok: { increment: net } },
+          });
+        }
+      }
+    }
+  });
+
+  revalidatePath("/pesanan");
+  revalidatePath("/dashboard");
+  revalidatePath("/produk");
+  revalidatePath("/laporan");
+  revalidatePath("/pelanggan");
   return { ok: true };
 }
 
@@ -209,5 +317,6 @@ export async function deletePesanan(formData: FormData): Promise<ActionResult> {
   revalidatePath("/pesanan");
   revalidatePath("/dashboard");
   revalidatePath("/laporan");
+  revalidatePath("/pelanggan");
   return { ok: true };
 }
