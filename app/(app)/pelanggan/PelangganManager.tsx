@@ -22,14 +22,14 @@ type PesananItemRow = {
   nama: string;
   jumlah: number;
   hargaSaat: number;
-  produk: { hargaModal: number };
+  modalSaat: number;
 };
 type PesananKomponenRow = {
   id: string;
   produkId: string;
   nama: string;
   pcs: number;
-  produk: { hargaModal: number };
+  modalSaat: number;
 };
 type PesananPaketRow = {
   id: string;

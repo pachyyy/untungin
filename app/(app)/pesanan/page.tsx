@@ -12,21 +12,25 @@ export default async function PesananPage({
   searchParams: Promise<{ new?: string }>;
 }) {
   const sp = await searchParams;
-  const [pesanan, produk, customers] = await Promise.all([
+  const [pesanan, produk, customers, akun] = await Promise.all([
     prisma.pesanan.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         items: {
           include: {
-            produk: { select: { nama: true, hargaModal: true } },
+            produk: { select: { nama: true } },
           },
         },
         pakets: {
           include: {
             komponen: {
-              include: { produk: { select: { nama: true, hargaModal: true } } },
+              include: { produk: { select: { nama: true } } },
             },
           },
+        },
+        pembayaran: {
+          orderBy: { tanggal: "asc" },
+          include: { akun: { select: { nama: true } } },
         },
       },
     }),
@@ -37,6 +41,11 @@ export default async function PesananPage({
     prisma.customer.findMany({
       orderBy: { nama: "asc" },
       select: { id: true, nama: true, noHp: true },
+    }),
+    prisma.akun.findMany({
+      where: { aktif: true },
+      orderBy: { urutan: "asc" },
+      select: { id: true, nama: true },
     }),
   ]);
 
@@ -67,7 +76,7 @@ export default async function PesananPage({
             nama: it.produk.nama,
             jumlah: it.jumlah,
             hargaSaat: it.hargaSaat,
-            produk: { hargaModal: it.produk.hargaModal },
+            modalSaat: it.modalSaat,
           })),
           pakets: p.pakets.map((pk) => ({
             id: pk.id,
@@ -78,12 +87,22 @@ export default async function PesananPage({
               produkId: k.produkId,
               nama: k.produk.nama,
               pcs: k.pcs,
-              produk: { hargaModal: k.produk.hargaModal },
+              modalSaat: k.modalSaat,
             })),
+          })),
+          pembayaran: p.pembayaran.map((b) => ({
+            id: b.id,
+            tanggal: b.tanggal.toISOString().slice(0, 10),
+            tanggalLabel: formatTanggal(b.tanggal),
+            akunId: b.akunId,
+            akunNama: b.akun.nama,
+            jumlah: b.jumlah,
+            jenis: b.jenis,
           })),
         }))}
         produk={produk}
         customers={customers}
+        akun={akun}
         openNew={sp.new === "1"}
       />
     </div>

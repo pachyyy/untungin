@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/format";
-import { totalPesanan, untungPesanan, isCommitted } from "@/lib/calc";
+import { totalPesanan, untungPesanan } from "@/lib/calc";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 
@@ -17,16 +17,9 @@ export default async function DashboardPage() {
   const [pesananBulanIni, pendingCount, stokMenipis] = await Promise.all([
     prisma.pesanan.findMany({
       where: { createdAt: { gte: monthStart, lt: monthEnd } },
-      include: {
-        items: { include: { produk: { select: { hargaModal: true } } } },
-        pakets: {
-          include: {
-            komponen: { include: { produk: { select: { hargaModal: true } } } },
-          },
-        },
-      },
+      include: { items: true, pakets: { include: { komponen: true } } },
     }),
-    prisma.pesanan.count({ where: { status: { in: ["baru", "diproses"] } } }),
+    prisma.pesanan.count({ where: { status: { in: ["belum_bayar", "nyicil"] } } }),
     prisma.produk.findMany({
       where: { stok: { lt: STOK_MENIPIS } },
       orderBy: { stok: "asc" },
@@ -34,8 +27,8 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  // Realized omzet/untung = orders already shipped or completed this month.
-  const realized = pesananBulanIni.filter((p) => isCommitted(p.status));
+  // Realized omzet/untung = orders fully paid (lunas) this month.
+  const realized = pesananBulanIni.filter((p) => p.status === "lunas");
   const omzet = realized.reduce((s, p) => s + totalPesanan(p), 0);
   const untung = realized.reduce((s, p) => s + untungPesanan(p), 0);
 
@@ -47,9 +40,7 @@ export default async function DashboardPage() {
           <Card className="col-span-2 bg-primary text-white">
             <p className="text-sm/none opacity-90">Untung bulan ini</p>
             <p className="mt-2 text-3xl font-black">{formatRupiah(untung)}</p>
-            <p className="mt-1 text-xs opacity-80">
-              Dari pesanan dikirim &amp; selesai
-            </p>
+            <p className="mt-1 text-xs opacity-80">Dari pesanan lunas</p>
           </Card>
           <Card>
             <p className="text-xs font-medium text-muted">Omzet bulan ini</p>

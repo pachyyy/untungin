@@ -4,32 +4,30 @@ export function marginPersen(hargaModal: number, hargaJual: number): number {
   return ((hargaJual - hargaModal) / hargaModal) * 100;
 }
 
-export const STATUS_LIST = ["baru", "diproses", "dikirim", "selesai"] as const;
+export const STATUS_LIST = ["belum_bayar", "nyicil", "lunas"] as const;
 export type Status = (typeof STATUS_LIST)[number];
 
 export const STATUS_LABEL: Record<Status, string> = {
-  baru: "Baru",
-  diproses: "Diproses",
-  dikirim: "Dikirim",
-  selesai: "Selesai",
+  belum_bayar: "Belum Bayar",
+  nyicil: "Nyicil",
+  lunas: "Lunas",
 };
 
-/** A status counts as "committed" (stock has been deducted) once shipped or completed. */
-export function isCommitted(status: string): boolean {
-  return status === "dikirim" || status === "selesai";
-}
-
-type ItemLike = { jumlah: number; hargaSaat: number; produk: { hargaModal: number } };
-type PaketKomponenLike = { pcs: number; produk: { hargaModal: number } };
+type ItemLike = { jumlah: number; hargaSaat: number; modalSaat: number };
+type PaketKomponenLike = { pcs: number; modalSaat: number };
 type PaketLike = { harga: number; komponen: PaketKomponenLike[] };
 type PesananLike = { items: ItemLike[]; pakets?: PaketLike[] };
 
-/** Modal cost of a paket = sum(komponen.pcs * produk.hargaModal). */
+/** Modal cost of a paket = sum(komponen.pcs * modalSaat). */
 export function modalPaket(paket: PaketLike): number {
-  return paket.komponen.reduce(
-    (sum, k) => sum + k.pcs * k.produk.hargaModal,
-    0
-  );
+  return paket.komponen.reduce((sum, k) => sum + k.pcs * k.modalSaat, 0);
+}
+
+/** Modal (HPP) of a whole order: items + paket components, from the snapshotted cost. */
+export function modalPesanan(p: PesananLike): number {
+  const items = p.items.reduce((s, it) => s + it.modalSaat * it.jumlah, 0);
+  const pakets = (p.pakets ?? []).reduce((s, pk) => s + modalPaket(pk), 0);
+  return items + pakets;
 }
 
 /** Total order value = single items (hargaSaat * jumlah) + pakets (harga). */
@@ -40,13 +38,15 @@ export function totalPesanan(p: PesananLike): number {
 }
 
 /**
- * Estimated profit:
- * - single item: (hargaSaat - produk.hargaModal) * jumlah
- * - paket: harga - sum(komponen.pcs * produk.hargaModal)
+ * Estimated profit at the sale price (not what was actually received — see
+ * modalPesanan()/syncPesanan() for the ledger-posted profit, which is based on
+ * actual payments and can differ on overpayment or a forced Lunas).
+ * - single item: (hargaSaat - modalSaat) * jumlah
+ * - paket: harga - sum(komponen.pcs * modalSaat)
  */
 export function untungPesanan(p: PesananLike): number {
   const items = p.items.reduce(
-    (s, it) => s + (it.hargaSaat - it.produk.hargaModal) * it.jumlah,
+    (s, it) => s + (it.hargaSaat - it.modalSaat) * it.jumlah,
     0
   );
   const pakets = (p.pakets ?? []).reduce(

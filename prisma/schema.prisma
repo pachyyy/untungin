@@ -37,7 +37,12 @@ model Pesanan {
   customer     Customer?      @relation(fields: [customerId], references: [id])
   items        PesananItem[]
   pakets       PesananPaket[]
-  status       String         @default("baru") // baru, diproses, dikirim, selesai
+  status       String         @default("belum_bayar") // belum_bayar, nyicil, lunas
+  // Already recorded by hand in Money Manager before the cutover to automated
+  // sync — never touched by syncPesanan(), so legacy history isn't double-posted.
+  sudahDicatatManual Boolean  @default(false)
+  pembayaran          Pembayaran[]
+  transaksiKeuntungan Transaksi?   @relation("KeuntunganPesanan")
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 }
@@ -60,6 +65,7 @@ model PesananItem {
   produk    Produk  @relation(fields: [produkId], references: [id])
   jumlah    Int
   hargaSaat Int // snapshot harga jual saat transaksi
+  modalSaat Int @default(0) // snapshot produk.hargaModal saat transaksi
 }
 
 // A bundle line within an order: several products combined, sold at one price.
@@ -73,10 +79,110 @@ model PesananPaket {
 }
 
 model PesananPaketItem {
-  id       String       @id @default(cuid())
-  paketId  String
-  paket    PesananPaket @relation(fields: [paketId], references: [id], onDelete: Cascade)
-  produkId String
-  produk   Produk       @relation(fields: [produkId], references: [id])
-  pcs      Int // how many pcs of this product are in the paket
+  id        String       @id @default(cuid())
+  paketId   String
+  paket     PesananPaket @relation(fields: [paketId], references: [id], onDelete: Cascade)
+  produkId  String
+  produk    Produk       @relation(fields: [produkId], references: [id])
+  pcs       Int // how many pcs of this product are in the paket
+  modalSaat Int @default(0) // snapshot produk.hargaModal saat transaksi
+}
+
+// ---------------------------------------------------------------------------
+// Money manager (Uang) — migrated from Realbyte Money Manager .mmbak backups.
+// ---------------------------------------------------------------------------
+
+model GrupAkun {
+  id        String  @id @default(cuid())
+  nama      String
+  tipe      Int     @default(0) // preserved ASSETGROUP.TYPE, label only
+  urutan    Int     @default(0)
+  aktif     Boolean @default(true)
+  sumberUid String? @unique // ASSETGROUP.uid — import key
+  akun      Akun[]
+}
+
+model Akun {
+  id        String   @id @default(cuid())
+  nama      String
+  grupId    String
+  grup      GrupAkun @relation(fields: [grupId], references: [id])
+  urutan    Int      @default(0)
+  aktif     Boolean  @default(true)
+  catatan   String?
+  sumberUid String?  @unique // ASSETS.uid
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transaksi      Transaksi[]  @relation("TxAkun")
+  transaksiMasuk Transaksi[]  @relation("TxAkunTujuan")
+  pembayaran     Pembayaran[]
+
+  @@index([grupId, urutan])
+}
+
+model Kategori {
+  id        String     @id @default(cuid())
+  nama      String
+  jenis     String // "masuk" | "keluar"
+  parentId  String?
+  parent    Kategori?  @relation("SubKategori", fields: [parentId], references: [id])
+  anak      Kategori[] @relation("SubKategori")
+  urutan    Int        @default(0)
+  aktif     Boolean    @default(true)
+  sumberUid String?    @unique // ZCATEGORY.uid
+  transaksi Transaksi[]
+
+  @@index([jenis, urutan])
+}
+
+model Transaksi {
+  id           String    @id @default(cuid())
+  jenis        String // "masuk" | "keluar" | "transfer" | "penyesuaian"
+  tanggal      DateTime
+  jumlah       Int // rupiah, always positive
+  akunId       String
+  akun         Akun      @relation("TxAkun", fields: [akunId], references: [id])
+  akunTujuanId String? // transfers only
+  akunTujuan   Akun?     @relation("TxAkunTujuan", fields: [akunTujuanId], references: [id])
+  kategoriId   String?
+  kategori     Kategori? @relation(fields: [kategoriId], references: [id])
+  catatan      String?
+  sumberUid    String?   @unique // INOUTCOME.uid, or txUidTrans for transfers
+
+  // --- profit-sync links: at most one Transaksi per parent, cascade cleans up ---
+  pembayaranId        String?     @unique // the income row a payment generated
+  pembayaran          Pembayaran? @relation(fields: [pembayaranId], references: [id], onDelete: Cascade)
+  pesananKeuntunganId String?     @unique // the profit transfer row for an order
+  pesananKeuntungan   Pesanan?    @relation("KeuntunganPesanan", fields: [pesananKeuntunganId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([tanggal])
+  @@index([akunId, tanggal])
+  @@index([kategoriId, tanggal])
+}
+
+// One payment against an order (single full payment, or one installment).
+model Pembayaran {
+  id        String    @id @default(cuid())
+  pesananId String
+  pesanan   Pesanan   @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  tanggal   DateTime
+  akunId    String
+  akun      Akun      @relation(fields: [akunId], references: [id])
+  jumlah    Int
+  jenis     String // "bayar" (single full payment) | "cicilan"
+  transaksi Transaksi?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([pesananId, tanggal])
+}
+
+// Key-value app config (profit-sync target accounts/category, mode default, etc).
+model Pengaturan {
+  key   String @id
+  value String
 }

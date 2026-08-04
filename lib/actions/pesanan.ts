@@ -2,9 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { STATUS_LIST, isCommitted, type Status } from "@/lib/calc";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { resolveCustomerId } from "@/lib/actions/customer";
+import { syncPesanan } from "@/lib/sync/keuntungan";
 
 type ItemInput = { produkId: string; jumlah: number; hargaSaat: number };
 type PaketKomponenInput = { produkId: string; pcs: number };
@@ -65,7 +65,7 @@ function parsePakets(raw: FormDataEntryValue | null): PaketInput[] {
   }
 }
 
-/** Total pcs to deduct from stock per product, across single items and paket components. */
+/** Total pcs needed per product, across single items and paket components. */
 function stockNeeds(pesanan: {
   items: { produkId: string; jumlah: number }[];
   pakets: { komponen: { produkId: string; pcs: number }[] }[];
@@ -77,6 +77,15 @@ function stockNeeds(pesanan: {
   for (const pk of pesanan.pakets)
     for (const k of pk.komponen) add(k.produkId, k.pcs);
   return need;
+}
+
+function revalidateAll() {
+  revalidatePath("/pesanan");
+  revalidatePath("/dashboard");
+  revalidatePath("/produk");
+  revalidatePath("/laporan");
+  revalidatePath("/pelanggan");
+  revalidatePath("/uang");
 }
 
 export async function createPesanan(formData: FormData): Promise<ActionResult> {
@@ -92,34 +101,48 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
       error: "Tambahkan minimal satu item satuan atau satu paket.",
     };
 
-  // Validate every referenced product still exists.
   const referenced = new Set<string>();
   items.forEach((it) => referenced.add(it.produkId));
   pakets.forEach((pk) => pk.komponen.forEach((k) => referenced.add(k.produkId)));
 
   const produkList = await prisma.produk.findMany({
     where: { id: { in: [...referenced] } },
-    select: { id: true },
+    select: { id: true, hargaModal: true, stok: true },
   });
-  const validIds = new Set(produkList.map((p) => p.id));
+  const produkById = new Map(produkList.map((p) => [p.id, p]));
   for (const id of referenced) {
-    if (!validIds.has(id))
+    if (!produkById.has(id))
       return { ok: false, error: "Ada produk yang tidak valid." };
   }
 
+  const needs = stockNeeds({
+    items,
+    pakets: pakets.map((pk) => ({ komponen: pk.komponen })),
+  });
+  for (const [produkId, qty] of needs) {
+    const p = produkById.get(produkId)!;
+    if (p.stok < qty)
+      return {
+        ok: false,
+        error: `Stok tidak cukup untuk salah satu produk (sisa ${p.stok}).`,
+      };
+  }
+
+  let pesananId = "";
   await prisma.$transaction(async (tx) => {
     const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
-    await tx.pesanan.create({
+    const created = await tx.pesanan.create({
       data: {
         namaCustomer,
         noHp: noHp || null,
         customerId,
-        status: "baru",
+        status: "belum_bayar",
         items: {
           create: items.map((it) => ({
             produkId: it.produkId,
             jumlah: it.jumlah,
             hargaSaat: it.hargaSaat, // selling price entered per order
+            modalSaat: produkById.get(it.produkId)!.hargaModal, // cost snapshot
           })),
         },
         pakets: {
@@ -130,18 +153,27 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
               create: pk.komponen.map((k) => ({
                 produkId: k.produkId,
                 pcs: k.pcs,
+                modalSaat: produkById.get(k.produkId)!.hargaModal,
               })),
             },
           })),
         },
       },
     });
+    pesananId = created.id;
+
+    // Stock leaves the moment the order is placed — status is now purely financial.
+    for (const [produkId, qty] of needs) {
+      await tx.produk.update({
+        where: { id: produkId },
+        data: { stok: { decrement: qty } },
+      });
+    }
+
+    await syncPesanan(tx, pesananId);
   });
 
-  revalidatePath("/pesanan");
-  revalidatePath("/dashboard");
-  revalidatePath("/laporan");
-  revalidatePath("/pelanggan");
+  revalidateAll();
   return { ok: true };
 }
 
@@ -166,26 +198,48 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
 
   const produkList = await prisma.produk.findMany({
     where: { id: { in: [...referenced] } },
-    select: { id: true },
+    select: { id: true, hargaModal: true, stok: true },
   });
-  const validIds = new Set(produkList.map((p) => p.id));
+  const produkById = new Map(produkList.map((p) => [p.id, p]));
   for (const rid of referenced) {
-    if (!validIds.has(rid))
+    if (!produkById.has(rid))
       return { ok: false, error: "Ada produk yang tidak valid." };
   }
 
   const existing = await prisma.pesanan.findUnique({
     where: { id },
-    include: { items: true, pakets: { include: { komponen: true } } },
+    include: {
+      items: true,
+      pakets: { include: { komponen: true } },
+      pembayaran: true,
+    },
   });
   if (!existing) return { ok: false, error: "Pesanan tidak ditemukan." };
 
-  const committed = isCommitted(existing.status);
   const oldNeeds = stockNeeds(existing);
   const newNeeds = stockNeeds({
     items,
     pakets: pakets.map((pk) => ({ komponen: pk.komponen })),
   });
+
+  // Stock is always deducted (creation-time invariant); check the net delta
+  // against current stock, adding back what this order already holds.
+  const products = new Set<string>([...oldNeeds.keys(), ...newNeeds.keys()]);
+  for (const pid of products) {
+    const net = (newNeeds.get(pid) ?? 0) - (oldNeeds.get(pid) ?? 0);
+    if (net > 0) {
+      const p = produkById.get(pid);
+      const available = (p?.stok ?? 0) + (oldNeeds.get(pid) ?? 0);
+      if (available < (newNeeds.get(pid) ?? 0)) {
+        return {
+          ok: false,
+          error: `Stok tidak cukup untuk salah satu produk (sisa ${p?.stok ?? 0}).`,
+        };
+      }
+    }
+  }
+
+  const totalDibayar = existing.pembayaran.reduce((s, p) => s + p.jumlah, 0);
 
   await prisma.$transaction(async (tx) => {
     const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
@@ -204,6 +258,7 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
             produkId: it.produkId,
             jumlah: it.jumlah,
             hargaSaat: it.hargaSaat,
+            modalSaat: produkById.get(it.produkId)!.hargaModal,
           })),
         },
         pakets: {
@@ -214,6 +269,7 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
               create: pk.komponen.map((k) => ({
                 produkId: k.produkId,
                 pcs: k.pcs,
+                modalSaat: produkById.get(k.produkId)!.hargaModal,
               })),
             },
           })),
@@ -221,71 +277,33 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
       },
     });
 
-    // Reconcile stock only if the order is (and stays) committed: return old, deduct new.
-    if (committed) {
-      const products = new Set<string>([
-        ...oldNeeds.keys(),
-        ...newNeeds.keys(),
-      ]);
-      for (const pid of products) {
-        const net = (oldNeeds.get(pid) ?? 0) - (newNeeds.get(pid) ?? 0);
-        if (net !== 0) {
-          await tx.produk.update({
-            where: { id: pid },
-            data: { stok: { increment: net } },
-          });
-        }
-      }
-    }
-  });
-
-  revalidatePath("/pesanan");
-  revalidatePath("/dashboard");
-  revalidatePath("/produk");
-  revalidatePath("/laporan");
-  revalidatePath("/pelanggan");
-  return { ok: true };
-}
-
-export async function updateStatus(formData: FormData): Promise<ActionResult> {
-  const id = String(formData.get("id") ?? "");
-  const next = String(formData.get("status") ?? "") as Status;
-  if (!id) return { ok: false, error: "Pesanan tidak ditemukan." };
-  if (!STATUS_LIST.includes(next))
-    return { ok: false, error: "Status tidak valid." };
-
-  const pesanan = await prisma.pesanan.findUnique({
-    where: { id },
-    include: { items: true, pakets: { include: { komponen: true } } },
-  });
-  if (!pesanan) return { ok: false, error: "Pesanan tidak ditemukan." };
-
-  const wasCommitted = isCommitted(pesanan.status);
-  const willCommit = isCommitted(next);
-
-  // Stock delta sign: -1 to deduct, +1 to return.
-  let delta = 0;
-  if (!wasCommitted && willCommit) delta = -1;
-  else if (wasCommitted && !willCommit) delta = +1;
-
-  const needs = stockNeeds(pesanan);
-
-  await prisma.$transaction(async (tx) => {
-    await tx.pesanan.update({ where: { id }, data: { status: next } });
-    if (delta !== 0) {
-      for (const [produkId, qty] of needs) {
+    // Reconcile stock deltas: return old, deduct new.
+    for (const pid of products) {
+      const net = (oldNeeds.get(pid) ?? 0) - (newNeeds.get(pid) ?? 0);
+      if (net !== 0) {
         await tx.produk.update({
-          where: { id: produkId },
-          data: { stok: { increment: delta * qty } },
+          where: { id: pid },
+          data: { stok: { increment: net } },
         });
       }
     }
+
+    // The sale price may have changed — re-derive status from what's already
+    // been paid (never auto-forces Lunas back up; that stays a manual choice
+    // via tandaiLunas, but a status can drop if the new total exceeds what
+    // was paid).
+    const newTotal = items.reduce((s, it) => s + it.hargaSaat * it.jumlah, 0) +
+      pakets.reduce((s, pk) => s + pk.harga, 0);
+    const newStatus =
+      totalDibayar <= 0 ? "belum_bayar" : totalDibayar >= newTotal ? "lunas" : "nyicil";
+    if (newStatus !== existing.status) {
+      await tx.pesanan.update({ where: { id }, data: { status: newStatus } });
+    }
+
+    await syncPesanan(tx, id);
   });
 
-  revalidatePath("/pesanan");
-  revalidatePath("/dashboard");
-  revalidatePath("/produk");
-  revalidatePath("/laporan");
+  revalidateAll();
   return { ok: true };
 }
 
@@ -302,21 +320,17 @@ export async function deletePesanan(formData: FormData): Promise<ActionResult> {
   const needs = stockNeeds(pesanan);
 
   await prisma.$transaction(async (tx) => {
-    // If stock was already deducted (dikirim/selesai), return it before deleting.
-    if (isCommitted(pesanan.status)) {
-      for (const [produkId, qty] of needs) {
-        await tx.produk.update({
-          where: { id: produkId },
-          data: { stok: { increment: qty } },
-        });
-      }
+    // Stock always left at creation now, so deleting always returns it.
+    for (const [produkId, qty] of needs) {
+      await tx.produk.update({
+        where: { id: produkId },
+        data: { stok: { increment: qty } },
+      });
     }
+    // Cascades: Pembayaran rows and the profit-transfer Transaksi go with the order.
     await tx.pesanan.delete({ where: { id } });
   });
 
-  revalidatePath("/pesanan");
-  revalidatePath("/dashboard");
-  revalidatePath("/laporan");
-  revalidatePath("/pelanggan");
+  revalidateAll();
   return { ok: true };
 }

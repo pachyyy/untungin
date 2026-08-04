@@ -2,7 +2,6 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { formatRupiah, formatBulanKey } from "@/lib/format";
-import { isCommitted } from "@/lib/calc";
 import { LaporanChart } from "./LaporanChart";
 import { DateRangeFilter } from "./DateRangeFilter";
 
@@ -30,18 +29,16 @@ export default async function LaporanPage({
   const pesanan = await prisma.pesanan.findMany({
     where: { createdAt: { gte: from, lte: to } },
     include: {
-      items: { include: { produk: { select: { nama: true, hargaModal: true } } } },
+      items: { include: { produk: { select: { nama: true } } } },
       pakets: {
         include: {
-          komponen: {
-            include: { produk: { select: { nama: true, hargaModal: true } } },
-          },
+          komponen: { include: { produk: { select: { nama: true } } } },
         },
       },
     },
   });
 
-  const realized = pesanan.filter((p) => isCommitted(p.status));
+  const realized = pesanan.filter((p) => p.status === "lunas");
 
   // Monthly aggregation
   const monthly = new Map<string, { omzet: number; modal: number; untung: number }>();
@@ -68,14 +65,11 @@ export default async function LaporanPage({
     };
 
     for (const it of p.items) {
-      addSale(it.hargaSaat * it.jumlah, it.produk.hargaModal * it.jumlah);
+      addSale(it.hargaSaat * it.jumlah, it.modalSaat * it.jumlah);
       addQty(it.produk.nama, it.jumlah);
     }
     for (const pk of p.pakets) {
-      const modal = pk.komponen.reduce(
-        (s, k) => s + k.produk.hargaModal * k.pcs,
-        0
-      );
+      const modal = pk.komponen.reduce((s, k) => s + k.modalSaat * k.pcs, 0);
       addSale(pk.harga, modal);
       for (const k of pk.komponen) addQty(k.produk.nama, k.pcs);
     }
@@ -98,7 +92,7 @@ export default async function LaporanPage({
 
   return (
     <div>
-      <PageHeader title="Laporan" subtitle="Untung dari pesanan selesai/dikirim" />
+      <PageHeader title="Laporan" subtitle="Untung dari pesanan lunas" />
       <div className="space-y-4 p-4">
         <DateRangeFilter from={fromStr} to={toStr} />
 

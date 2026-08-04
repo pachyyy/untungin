@@ -13,16 +13,12 @@ export default async function PelangganPage() {
         orderBy: { createdAt: "desc" },
         include: {
           items: {
-            include: {
-              produk: { select: { nama: true, hargaModal: true } },
-            },
+            include: { produk: { select: { nama: true } } },
           },
           pakets: {
             include: {
               komponen: {
-                include: {
-                  produk: { select: { nama: true, hargaModal: true } },
-                },
+                include: { produk: { select: { nama: true } } },
               },
             },
           },
@@ -51,7 +47,7 @@ export default async function PelangganPage() {
               nama: it.produk.nama,
               jumlah: it.jumlah,
               hargaSaat: it.hargaSaat,
-              produk: { hargaModal: it.produk.hargaModal },
+              modalSaat: it.modalSaat,
             })),
             pakets: p.pakets.map((pk) => ({
               id: pk.id,
@@ -62,7 +58,7 @@ export default async function PelangganPage() {
                 produkId: k.produkId,
                 nama: k.produk.nama,
                 pcs: k.pcs,
-                produk: { hargaModal: k.produk.hargaModal },
+                modalSaat: k.modalSaat,
               })),
             })),
           })),

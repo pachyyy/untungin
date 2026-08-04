@@ -33,16 +33,17 @@ import {
   STATUS_LIST,
   STATUS_LABEL,
   totalPesanan,
+  modalPesanan,
   untungPesanan,
   type Status,
 } from "@/lib/calc";
 import { Pencil } from "lucide-react";
+import { createPesanan, updatePesanan, deletePesanan } from "@/lib/actions/pesanan";
 import {
-  createPesanan,
-  updatePesanan,
-  updateStatus,
-  deletePesanan,
-} from "@/lib/actions/pesanan";
+  tambahPembayaran,
+  hapusPembayaran,
+  tandaiLunas,
+} from "@/lib/actions/pembayaran";
 
 type ItemRow = {
   id: string;
@@ -50,20 +51,29 @@ type ItemRow = {
   nama: string;
   jumlah: number;
   hargaSaat: number;
-  produk: { hargaModal: number };
+  modalSaat: number;
 };
 type PaketKomponenRow = {
   id: string;
   produkId: string;
   nama: string;
   pcs: number;
-  produk: { hargaModal: number };
+  modalSaat: number;
 };
 type PaketRow = {
   id: string;
   nama: string;
   harga: number;
   komponen: PaketKomponenRow[];
+};
+type PembayaranRow = {
+  id: string;
+  tanggal: string;
+  tanggalLabel: string;
+  akunId: string;
+  akunNama: string;
+  jumlah: number;
+  jenis: string;
 };
 type PesananRow = {
   id: string;
@@ -73,9 +83,11 @@ type PesananRow = {
   tanggal: string;
   items: ItemRow[];
   pakets: PaketRow[];
+  pembayaran: PembayaranRow[];
 };
 type ProdukOpt = { id: string; nama: string; stok: number };
 type CustomerOpt = { id: string; nama: string; noHp: string | null };
+type AkunOpt = { id: string; nama: string };
 
 const FILTERS = ["semua", ...STATUS_LIST] as const;
 
@@ -83,11 +95,13 @@ export function PesananManager({
   pesanan,
   produk,
   customers,
+  akun,
   openNew,
 }: {
   pesanan: PesananRow[];
   produk: ProdukOpt[];
   customers: CustomerOpt[];
+  akun: AkunOpt[];
   openNew: boolean;
 }) {
   const router = useRouter();
@@ -96,6 +110,7 @@ export function PesananManager({
   const [formOpen, setFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<PesananRow | null>(null);
   const [confirmDel, setConfirmDel] = useState<PesananRow | null>(null);
+  const [payingOrder, setPayingOrder] = useState<PesananRow | null>(null);
 
   useEffect(() => {
     if (openNew) {
@@ -103,6 +118,14 @@ export function PesananManager({
       setFormOpen(true);
     }
   }, [openNew]);
+
+  // Keep the open payment modal's data in sync after router.refresh() brings
+  // in a fresh `pesanan` list (e.g. right after adding/removing a payment).
+  useEffect(() => {
+    if (!payingOrder) return;
+    const fresh = pesanan.find((p) => p.id === payingOrder.id);
+    if (fresh && fresh !== payingOrder) setPayingOrder(fresh);
+  }, [pesanan, payingOrder]);
 
   function openNewForm() {
     setEditingOrder(null);
@@ -170,7 +193,7 @@ export function PesananManager({
               p={p}
               onEdit={() => openEditForm(p)}
               onDelete={() => setConfirmDel(p)}
-              onChanged={() => router.refresh()}
+              onPay={() => setPayingOrder(p)}
             />
           ))}
         </div>
@@ -207,6 +230,14 @@ export function PesananManager({
           router.refresh();
         }}
       />
+
+      <PaymentModal
+        key={payingOrder?.id}
+        row={payingOrder}
+        akun={akun}
+        onClose={() => setPayingOrder(null)}
+        onChanged={() => router.refresh()}
+      />
     </div>
   );
 }
@@ -215,27 +246,17 @@ function PesananCard({
   p,
   onEdit,
   onDelete,
-  onChanged,
+  onPay,
 }: {
   p: PesananRow;
   onEdit: () => void;
   onDelete: () => void;
-  onChanged: () => void;
+  onPay: () => void;
 }) {
-  const [pending, startTransition] = useTransition();
   const total = totalPesanan(p);
   const untung = untungPesanan(p);
-
-  function changeStatus(status: string) {
-    const fd = new FormData();
-    fd.set("id", p.id);
-    fd.set("status", status);
-    startTransition(async () => {
-      const res = await updateStatus(fd);
-      if (res.ok) onChanged();
-      else alert(res.error);
-    });
-  }
+  const dibayar = p.pembayaran.reduce((s, b) => s + b.jumlah, 0);
+  const sisa = Math.max(0, total - dibayar);
 
   return (
     <Card className="space-y-3">
@@ -298,23 +319,17 @@ function PesananCard({
         </span>
       </div>
 
+      {p.status !== "belum_bayar" && (
+        <div className="flex justify-between text-xs text-muted">
+          <span>Dibayar {formatRupiah(dibayar)}</span>
+          {p.status === "nyicil" && <span>Sisa {formatRupiah(sisa)}</span>}
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
-        <Select
-          value={p.status}
-          disabled={pending}
-          onValueChange={(v) => changeStatus(v)}
-        >
-          <SelectTrigger className="h-9 flex-1 text-sm">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {STATUS_LIST.map((s) => (
-              <SelectItem key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Button variant="outline" size="sm" className="flex-1" onClick={onPay}>
+          {p.status === "belum_bayar" ? "Catat Bayar" : "Kelola Pembayaran"}
+        </Button>
         <button
           onClick={onDelete}
           className="rounded-lg px-2 py-1 text-sm font-medium text-destructive hover:bg-destructive/10"
@@ -887,6 +902,199 @@ function CustomerCombobox({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+function PaymentModal({
+  row,
+  akun,
+  onClose,
+  onChanged,
+}: {
+  row: PesananRow | null;
+  akun: AkunOpt[];
+  onClose: () => void;
+  onChanged: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const total = row ? totalPesanan(row) : 0;
+  const dibayar = row ? row.pembayaran.reduce((s, b) => s + b.jumlah, 0) : 0;
+  const sisa = Math.max(0, total - dibayar);
+
+  const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
+  const [akunId, setAkunId] = useState(akun[0]?.id ?? "");
+  const [jumlah, setJumlah] = useState(() => String(sisa || ""));
+  const [error, setError] = useState<string>();
+
+  function addPayment() {
+    if (!row) return;
+    setError(undefined);
+    const amount = Math.floor(Number(jumlah));
+    if (!akunId) return setError("Pilih akun tujuan pembayaran.");
+    if (!Number.isFinite(amount) || amount <= 0) return setError("Jumlah harus lebih dari 0.");
+
+    const jenis = row.pembayaran.length === 0 && amount >= sisa ? "bayar" : "cicilan";
+    const fd = new FormData();
+    fd.set("pesananId", row.id);
+    fd.set("tanggal", tanggal);
+    fd.set("akunId", akunId);
+    fd.set("jumlah", String(amount));
+    fd.set("jenis", jenis);
+    startTransition(async () => {
+      const res = await tambahPembayaran(fd);
+      if (res.ok) {
+        setJumlah("");
+        onChanged();
+      } else setError(res.error);
+    });
+  }
+
+  function removePayment(id: string) {
+    const fd = new FormData();
+    fd.set("id", id);
+    startTransition(async () => {
+      const res = await hapusPembayaran(fd);
+      if (res.ok) onChanged();
+      else alert(res.error);
+    });
+  }
+
+  function forceLunas() {
+    if (!row) return;
+    const modal = modalPesanan(row);
+    const untung = dibayar - modal;
+    if (untung < 0) {
+      const ok = confirm(
+        `Pembayaran (${formatRupiah(dibayar)}) belum menutup modal (${formatRupiah(
+          modal
+        )}). Menandai lunas akan mencatat kerugian ${formatRupiah(-untung)}. Lanjutkan?`
+      );
+      if (!ok) return;
+    }
+    const fd = new FormData();
+    fd.set("pesananId", row.id);
+    startTransition(async () => {
+      const res = await tandaiLunas(fd);
+      if (res.ok) onChanged();
+      else alert(res.error);
+    });
+  }
+
+  return (
+    <Modal
+      key={row?.id}
+      open={!!row}
+      onClose={onClose}
+      title={row ? `Pembayaran — ${row.namaCustomer}` : "Pembayaran"}
+    >
+      {row && (
+        <div className="space-y-3">
+          <div className="flex justify-between rounded-xl bg-secondary px-3 py-2 text-sm">
+            <span>Total {formatRupiah(total)}</span>
+            <span>Dibayar {formatRupiah(dibayar)}</span>
+            <span>Sisa {formatRupiah(sisa)}</span>
+          </div>
+
+          {row.pembayaran.length > 0 && (
+            <ul className="space-y-1.5">
+              {row.pembayaran.map((b) => (
+                <li
+                  key={b.id}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-2.5 py-1.5 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-ink">
+                      {formatRupiah(b.jumlah)} · {b.akunNama}
+                    </p>
+                    <p className="text-xs text-muted">
+                      {b.tanggalLabel} · {b.jenis === "cicilan" ? "Cicilan" : "Bayar penuh"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removePayment(b.id)}
+                    disabled={pending}
+                    className="shrink-0 px-1 text-destructive"
+                    aria-label="Hapus pembayaran"
+                  >
+                    ✕
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {sisa > 0 && akun.length === 0 && (
+            <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
+              Belum ada akun uang. Tambahkan akun dulu di Uang → Akun.
+            </p>
+          )}
+
+          {sisa > 0 && akun.length > 0 && (
+            <div className="space-y-2 rounded-xl border border-border p-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-xs">Tanggal</Label>
+                  <Input
+                    type="date"
+                    className="h-10"
+                    value={tanggal}
+                    onChange={(e) => setTanggal(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Akun</Label>
+                  <Select value={akunId} onValueChange={setAkunId}>
+                    <SelectTrigger className="h-10 text-sm">
+                      <SelectValue placeholder="Pilih akun" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {akun.map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.nama}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Jumlah</Label>
+                <Input
+                  className="h-10"
+                  inputMode="numeric"
+                  value={jumlah}
+                  onChange={(e) => setJumlah(e.target.value.replace(/[^0-9]/g, ""))}
+                />
+              </div>
+              {error && <p className="text-sm text-destructive">{error}</p>}
+              <Button
+                type="button"
+                size="sm"
+                className="w-full"
+                disabled={pending}
+                onClick={addPayment}
+              >
+                {pending ? "Menyimpan…" : "Tambah Pembayaran"}
+              </Button>
+            </div>
+          )}
+
+          {row.status !== "lunas" && row.pembayaran.length > 0 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              disabled={pending}
+              onClick={forceLunas}
+            >
+              Tandai Lunas
+            </Button>
+          )}
+        </div>
+      )}
+    </Modal>
   );
 }
 

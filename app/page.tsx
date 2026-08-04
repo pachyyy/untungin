@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { getMode } from "@/lib/mode";
 
-export default function Home() {
-  redirect("/dashboard");
+export default async function Home() {
+  const mode = await getMode();
+  redirect(mode === "uang" ? "/uang" : "/dashboard");
 }
