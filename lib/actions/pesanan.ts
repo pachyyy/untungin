@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { resolveCustomerId } from "@/lib/actions/customer";
-import { syncPesanan } from "@/lib/sync/keuntungan";
 
 type ItemInput = { produkId: string; jumlah: number; hargaSaat: number };
 type PaketKomponenInput = { produkId: string; pcs: number };
@@ -85,7 +84,6 @@ function revalidateAll() {
   revalidatePath("/produk");
   revalidatePath("/laporan");
   revalidatePath("/pelanggan");
-  revalidatePath("/uang");
 }
 
 export async function createPesanan(formData: FormData): Promise<ActionResult> {
@@ -169,8 +167,6 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
         data: { stok: { decrement: qty } },
       });
     }
-
-    await syncPesanan(tx, pesananId);
   });
 
   revalidateAll();
@@ -299,8 +295,6 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
     if (newStatus !== existing.status) {
       await tx.pesanan.update({ where: { id }, data: { status: newStatus } });
     }
-
-    await syncPesanan(tx, id);
   });
 
   revalidateAll();
@@ -327,7 +321,7 @@ export async function deletePesanan(formData: FormData): Promise<ActionResult> {
         data: { stok: { increment: qty } },
       });
     }
-    // Cascades: Pembayaran rows and the profit-transfer Transaksi go with the order.
+    // Cascades: Pembayaran rows go with the order.
     await tx.pesanan.delete({ where: { id } });
   });
 

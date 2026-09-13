@@ -5,13 +5,6 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/Select";
 import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
@@ -70,8 +63,7 @@ type PembayaranRow = {
   id: string;
   tanggal: string;
   tanggalLabel: string;
-  akunId: string;
-  akunNama: string;
+  metode: string | null;
   jumlah: number;
   jenis: string;
 };
@@ -87,21 +79,22 @@ type PesananRow = {
 };
 type ProdukOpt = { id: string; nama: string; stok: number };
 type CustomerOpt = { id: string; nama: string; noHp: string | null };
-type AkunOpt = { id: string; nama: string };
 
 const FILTERS = ["semua", ...STATUS_LIST] as const;
+// A payment's metode isn't constrained to this list server-side — an older
+// or hand-entered value can fall outside it and still displays fine, it just
+// won't be one of the selectable options going forward.
+const METODE_OPTIONS = ["Cash", "Transfer", "QRIS", "Lainnya"] as const;
 
 export function PesananManager({
   pesanan,
   produk,
   customers,
-  akun,
   openNew,
 }: {
   pesanan: PesananRow[];
   produk: ProdukOpt[];
   customers: CustomerOpt[];
-  akun: AkunOpt[];
   openNew: boolean;
 }) {
   const router = useRouter();
@@ -234,7 +227,6 @@ export function PesananManager({
       <PaymentModal
         key={payingOrder?.id}
         row={payingOrder}
-        akun={akun}
         onClose={() => setPayingOrder(null)}
         onChanged={() => router.refresh()}
       />
@@ -907,12 +899,10 @@ function CustomerCombobox({
 
 function PaymentModal({
   row,
-  akun,
   onClose,
   onChanged,
 }: {
   row: PesananRow | null;
-  akun: AkunOpt[];
   onClose: () => void;
   onChanged: () => void;
 }) {
@@ -922,7 +912,7 @@ function PaymentModal({
   const sisa = Math.max(0, total - dibayar);
 
   const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
-  const [akunId, setAkunId] = useState(akun[0]?.id ?? "");
+  const [metode, setMetode] = useState("");
   const [jumlah, setJumlah] = useState(() => String(sisa || ""));
   const [error, setError] = useState<string>();
 
@@ -930,14 +920,13 @@ function PaymentModal({
     if (!row) return;
     setError(undefined);
     const amount = Math.floor(Number(jumlah));
-    if (!akunId) return setError("Pilih akun tujuan pembayaran.");
     if (!Number.isFinite(amount) || amount <= 0) return setError("Jumlah harus lebih dari 0.");
 
     const jenis = row.pembayaran.length === 0 && amount >= sisa ? "bayar" : "cicilan";
     const fd = new FormData();
     fd.set("pesananId", row.id);
     fd.set("tanggal", tanggal);
-    fd.set("akunId", akunId);
+    fd.set("metode", metode);
     fd.set("jumlah", String(amount));
     fd.set("jenis", jenis);
     startTransition(async () => {
@@ -1004,7 +993,8 @@ function PaymentModal({
                 >
                   <div className="min-w-0">
                     <p className="truncate text-ink">
-                      {formatRupiah(b.jumlah)} · {b.akunNama}
+                      {formatRupiah(b.jumlah)}
+                      {b.metode ? ` · ${b.metode}` : ""}
                     </p>
                     <p className="text-xs text-muted">
                       {b.tanggalLabel} · {b.jenis === "cicilan" ? "Cicilan" : "Bayar penuh"}
@@ -1024,13 +1014,7 @@ function PaymentModal({
             </ul>
           )}
 
-          {sisa > 0 && akun.length === 0 && (
-            <p className="rounded-lg bg-warning/10 px-3 py-2 text-sm text-warning">
-              Belum ada akun uang. Tambahkan akun dulu di Uang → Akun.
-            </p>
-          )}
-
-          {sisa > 0 && akun.length > 0 && (
+          {sisa > 0 && (
             <div className="space-y-2 rounded-xl border border-border p-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -1043,19 +1027,19 @@ function PaymentModal({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Akun</Label>
-                  <Select value={akunId} onValueChange={setAkunId}>
-                    <SelectTrigger className="h-10 text-sm">
-                      <SelectValue placeholder="Pilih akun" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {akun.map((a) => (
-                        <SelectItem key={a.id} value={a.id}>
-                          {a.nama}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label className="text-xs">Metode (opsional)</Label>
+                  <select
+                    value={metode}
+                    onChange={(e) => setMetode(e.target.value)}
+                    className="flex h-10 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"
+                  >
+                    <option value="">— Tanpa metode —</option>
+                    {METODE_OPTIONS.map((m) => (
+                      <option key={m} value={m}>
+                        {m}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
               <div>

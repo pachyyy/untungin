@@ -12,7 +12,7 @@ export default async function PesananPage({
   searchParams: Promise<{ new?: string }>;
 }) {
   const sp = await searchParams;
-  const [pesanan, produk, customers, akun] = await Promise.all([
+  const [pesanan, produk, customers] = await Promise.all([
     prisma.pesanan.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -30,7 +30,6 @@ export default async function PesananPage({
         },
         pembayaran: {
           orderBy: { tanggal: "asc" },
-          include: { akun: { select: { nama: true } } },
         },
       },
     }),
@@ -41,11 +40,6 @@ export default async function PesananPage({
     prisma.customer.findMany({
       orderBy: { nama: "asc" },
       select: { id: true, nama: true, noHp: true },
-    }),
-    prisma.akun.findMany({
-      where: { aktif: true },
-      orderBy: { urutan: "asc" },
-      select: { id: true, nama: true },
     }),
   ]);
 
@@ -94,15 +88,13 @@ export default async function PesananPage({
             id: b.id,
             tanggal: b.tanggal.toISOString().slice(0, 10),
             tanggalLabel: formatTanggal(b.tanggal),
-            akunId: b.akunId,
-            akunNama: b.akun.nama,
+            metode: b.metode,
             jumlah: b.jumlah,
             jenis: b.jenis,
           })),
         }))}
         produk={produk}
         customers={customers}
-        akun={akun}
         openNew={sp.new === "1"}
       />
     </div>

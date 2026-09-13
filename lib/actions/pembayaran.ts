@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { totalPesanan } from "@/lib/calc";
-import { syncPesanan } from "@/lib/sync/keuntungan";
 import type { ActionResult } from "@/lib/actions/supplier";
 
 function parsePositiveInt(value: FormDataEntryValue | null): number | null {
@@ -49,33 +48,27 @@ function revalidateAll() {
   revalidatePath("/dashboard");
   revalidatePath("/laporan");
   revalidatePath("/pelanggan");
-  revalidatePath("/uang");
 }
 
 export async function tambahPembayaran(formData: FormData): Promise<ActionResult> {
   const pesananId = String(formData.get("pesananId") ?? "");
   const tanggalStr = String(formData.get("tanggal") ?? "");
-  const akunId = String(formData.get("akunId") ?? "");
+  const metode = String(formData.get("metode") ?? "").trim().slice(0, 40) || null;
   const jumlah = parsePositiveInt(formData.get("jumlah"));
   const jenis = String(formData.get("jenis") ?? "cicilan") === "bayar" ? "bayar" : "cicilan";
 
   if (!pesananId) return { ok: false, error: "Pesanan tidak ditemukan." };
-  if (!akunId) return { ok: false, error: "Akun wajib dipilih." };
   if (jumlah === null) return { ok: false, error: "Jumlah pembayaran harus lebih dari 0." };
 
   const tanggal = tanggalStr ? new Date(tanggalStr) : new Date();
   if (Number.isNaN(tanggal.getTime()))
     return { ok: false, error: "Tanggal tidak valid." };
 
-  const akun = await prisma.akun.findUnique({ where: { id: akunId } });
-  if (!akun) return { ok: false, error: "Akun tidak ditemukan." };
-
   await prisma.$transaction(async (tx) => {
     await tx.pembayaran.create({
-      data: { pesananId, tanggal, akunId, jumlah, jenis },
+      data: { pesananId, tanggal, metode, jumlah, jenis },
     });
     await recomputeStatus(tx, pesananId, false);
-    await syncPesanan(tx, pesananId);
   });
 
   revalidateAll();
@@ -90,10 +83,8 @@ export async function hapusPembayaran(formData: FormData): Promise<ActionResult>
   if (!bayar) return { ok: false, error: "Pembayaran tidak ditemukan." };
 
   await prisma.$transaction(async (tx) => {
-    // Cascades: deleting the Pembayaran also deletes the income Transaksi it posted.
     await tx.pembayaran.delete({ where: { id } });
     await recomputeStatus(tx, bayar.pesananId, true);
-    await syncPesanan(tx, bayar.pesananId);
   });
 
   revalidateAll();
@@ -117,10 +108,7 @@ export async function tandaiLunas(formData: FormData): Promise<ActionResult> {
   if (pesanan.pembayaran.length === 0)
     return { ok: false, error: "Tambahkan minimal satu pembayaran dulu." };
 
-  await prisma.$transaction(async (tx) => {
-    await tx.pesanan.update({ where: { id: pesananId }, data: { status: "lunas" } });
-    await syncPesanan(tx, pesananId);
-  });
+  await prisma.pesanan.update({ where: { id: pesananId }, data: { status: "lunas" } });
 
   revalidateAll();
   return { ok: true };
