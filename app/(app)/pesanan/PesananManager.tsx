@@ -508,10 +508,10 @@ function PesananFormModal({
   // --- single items ---
   function addItem() {
     setItems((prev) => [
-      ...prev,
       produk.length > 0
         ? { produkId: produk[0].id, namaManual: "", modal: "", jumlah: 1, harga: "" }
         : { produkId: null, namaManual: "", modal: "", jumlah: 1, harga: "" },
+      ...prev,
     ]);
   }
   function updateItem(idx: number, patch: Partial<DraftItem>) {
@@ -527,8 +527,8 @@ function PesananFormModal({
   function addPaket() {
     if (produk.length === 0) return;
     setPakets((prev) => [
-      ...prev,
       { nama: "", harga: "", komponen: [{ produkId: produk[0].id, pcs: 1 }] },
+      ...prev,
     ]);
   }
   function updatePaket(idx: number, patch: Partial<DraftPaket>) {
