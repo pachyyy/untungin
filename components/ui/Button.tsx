@@ -19,9 +19,9 @@ const buttonVariants = cva(
           "border border-panel-border bg-glass-danger/15 text-glass-danger hover:bg-glass-danger/25",
       },
       size: {
-        sm: "h-9 px-3 text-sm",
-        md: "h-11 px-4 text-[15px]",
-        lg: "h-12 px-5 text-base",
+        sm: "brutal-pad h-9 px-3 text-sm",
+        md: "brutal-pad h-11 px-4 text-[15px]",
+        lg: "brutal-pad h-12 px-5 text-base",
         icon: "h-10 w-10",
       },
     },

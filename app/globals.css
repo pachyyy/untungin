@@ -162,49 +162,49 @@
      white-on-gradient, which brutalist repoints via the .text-white rule below). */
   [data-design-mode="brutalist"] {
     --bg-base: #050505;
-    --panel: #ffffff;
-    --panel-strong: color-mix(in srgb, #ffe600 16%, #ffffff);
+    --panel: #f2ede0;
+    --panel-strong: color-mix(in srgb, #c9a227 18%, #f2ede0);
     --panel-border: #050505;
     --glass-ink: #050505;
     --glass-ink-dim: rgba(5, 5, 5, 0.62);
     --glass-ink-faint: rgba(5, 5, 5, 0.42);
-    --glass-accent: #ffe600;
-    --glass-accent2: #ffe600;
-    --glass-success: #00c853;
-    --glass-warning: #ff9100;
-    --glass-danger: #ff3b30;
+    --glass-accent: #c9a227;
+    --glass-accent2: #c9a227;
+    --glass-success: #2f8f4e;
+    --glass-warning: #c97a1f;
+    --glass-danger: #b83227;
     --glass-divider: #050505;
-    --glass-input-bg: #ffffff;
-    --glass-shadow: #ffe600;
+    --glass-input-bg: #f2ede0;
+    --glass-shadow: #c9a227;
     --glass-scrim: rgba(0, 0, 0, 0.75);
     --accent-ink: #050505;
-    --blob-1: #ffe600;
-    --blob-2: #00c853;
-    --blob-3: #ff3b30;
-    --blob-4: #f5f5f0;
+    --blob-1: #c9a227;
+    --blob-2: #2f8f4e;
+    --blob-3: #b83227;
+    --blob-4: #e8e2d0;
   }
 
   [data-design-mode="brutalist"].light {
     --bg-base: #f2f0e8;
     --panel: #050505;
-    --panel-strong: color-mix(in srgb, #ff3b30 18%, #050505);
+    --panel-strong: color-mix(in srgb, #b83227 20%, #050505);
     --panel-border: #050505;
     --glass-ink: #f2f0e8;
     --glass-ink-dim: rgba(242, 240, 232, 0.65);
     --glass-ink-faint: rgba(242, 240, 232, 0.45);
-    --glass-accent: #ff3b30;
-    --glass-accent2: #ff3b30;
-    --glass-success: #00a651;
-    --glass-warning: #ff9100;
-    --glass-danger: #ff3b30;
+    --glass-accent: #b83227;
+    --glass-accent2: #b83227;
+    --glass-success: #1f7a42;
+    --glass-warning: #c97a1f;
+    --glass-danger: #b83227;
     --glass-divider: #050505;
     --glass-input-bg: #050505;
-    --glass-shadow: #ff3b30;
+    --glass-shadow: #b83227;
     --glass-scrim: rgba(0, 0, 0, 0.55);
     --accent-ink: #f2f0e8;
-    --blob-1: #ff3b30;
-    --blob-2: #00a651;
-    --blob-3: #ffe600;
+    --blob-1: #b83227;
+    --blob-2: #1f7a42;
+    --blob-3: #c9a227;
     --blob-4: #050505;
   }
 
@@ -297,7 +297,7 @@
      [data-design-mode="brutalist"] below: .brutal-interactive = hover glitch
      snap for buttons/cards/nav rows, .text-display = condensed uppercase
      display type for headings/labels/buttons/nav, .text-data = monospace for
-     prices/dates/counts/ids. */
+     prices/dates/counts/ids, .brutal-pad = extra chunky button padding. */
   .brutal-interactive {
     transition: transform 0.08s, box-shadow 0.08s;
   }
@@ -342,10 +342,19 @@
 
 /* Every current use of literal text-white in the app is icon/label text sitting
    on an accent-filled surface (logo mark, primary buttons, active nav
-   monograms) — brutalist's accent is a bright yellow/red, so it needs dark/
-   light ink instead of white for contrast. */
+   monograms) — brutalist's accent is a solid mustard/brick tone, so it needs
+   dark/light ink instead of white for contrast. */
 [data-design-mode="brutalist"] .text-white {
   color: var(--accent-ink);
+}
+
+/* Chunkier, uniform button padding regardless of size variant — reads as a
+   bold stamped block rather than a fine-tuned sized control (button height
+   itself stays fixed per size variant via h-9/h-11/h-12, so this only widens
+   the horizontal footprint). */
+[data-design-mode="brutalist"] .brutal-pad {
+  padding-left: 22px !important;
+  padding-right: 22px !important;
 }
 
 [data-design-mode="brutalist"] .text-display {
@@ -376,13 +385,16 @@
 
 /* Status/stock pills: rectangular (radius already forced to 0 above), 2px
    border, solid opaque fill instead of glass mode's color-mix translucency,
-   text always high-contrast against the tag's own fill. */
+   text always high-contrast against the tag's own fill. Padding bumped up
+   from the glass-mode pill's tight px-2.5/py-0.5 so it reads as a stamped
+   tag/label rather than a small rounded sticker. */
 [data-design-mode="brutalist"] .badge-default,
 [data-design-mode="brutalist"] .badge-primary,
 [data-design-mode="brutalist"] .badge-success,
 [data-design-mode="brutalist"] .badge-warning {
   border: 2px solid var(--panel-border);
   color: var(--accent-ink);
+  padding: 4px 10px !important;
 }
 [data-design-mode="brutalist"] .badge-default {
   background-color: var(--panel-strong);
