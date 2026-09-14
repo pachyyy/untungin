@@ -1,9 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { formatTanggal } from "@/lib/format";
 import Link from "next/link";
 import { ProdukManager } from "./ProdukManager";
 
 export const dynamic = "force-dynamic";
+
+const RIWAYAT_RESTOCK_LIMIT = 5;
 
 export default async function ProdukPage({
   searchParams,
@@ -14,7 +17,13 @@ export default async function ProdukPage({
   const [produk, suppliers] = await Promise.all([
     prisma.produk.findMany({
       orderBy: { createdAt: "desc" },
-      include: { supplier: { select: { nama: true } } },
+      include: {
+        supplier: { select: { nama: true } },
+        restock: {
+          orderBy: { tanggal: "desc" },
+          take: RIWAYAT_RESTOCK_LIMIT,
+        },
+      },
     }),
     prisma.supplier.findMany({ orderBy: { nama: "asc" } }),
   ]);
@@ -41,6 +50,12 @@ export default async function ProdukPage({
           stok: p.stok,
           supplierId: p.supplierId,
           supplierNama: p.supplier.nama,
+          riwayatRestock: p.restock.map((r) => ({
+            id: r.id,
+            qty: r.qty,
+            hargaBeli: r.hargaBeli,
+            tanggalLabel: formatTanggal(r.tanggal),
+          })),
         }))}
         suppliers={suppliers}
         openNew={sp.new === "1"}

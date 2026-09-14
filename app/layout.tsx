@@ -12,6 +12,16 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Untungin",
   description: "Kelola bisnis reseller: produk, pesanan, dan untung.",
+  appleWebApp: {
+    capable: true,
+    title: "Untungin",
+    statusBarStyle: "default",
+  },
+  other: {
+    // Next only emits the newer "mobile-web-app-capable" from appleWebApp.capable;
+    // pre-16.4 iOS Safari needs this legacy name for true standalone mode.
+    "apple-mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {

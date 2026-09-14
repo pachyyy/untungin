@@ -11,7 +11,14 @@ import { SearchInput } from "@/components/ui/SearchInput";
 import { Plus } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
 import { createProduk, updateProduk, deleteProduk } from "@/lib/actions/produk";
+import { restockProduk } from "@/lib/actions/restock";
 
+type RiwayatRestockRow = {
+  id: string;
+  qty: number;
+  hargaBeli: number;
+  tanggalLabel: string;
+};
 type ProdukRow = {
   id: string;
   nama: string;
@@ -19,6 +26,7 @@ type ProdukRow = {
   stok: number;
   supplierId: string;
   supplierNama: string;
+  riwayatRestock: RiwayatRestockRow[];
 };
 type Supplier = { id: string; nama: string; kontak: string | null };
 
@@ -35,6 +43,7 @@ export function ProdukManager({
   const [editing, setEditing] = useState<ProdukRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState<ProdukRow | null>(null);
+  const [restocking, setRestocking] = useState<ProdukRow | null>(null);
   const [query, setQuery] = useState("");
 
   const shown = useMemo(() => {
@@ -107,6 +116,12 @@ export function ProdukManager({
                     Stok {p.stok}
                   </span>
                   <button
+                    onClick={() => setRestocking(p)}
+                    className="text-xs font-medium text-primary hover:underline"
+                  >
+                    Restock
+                  </button>
+                  <button
                     onClick={() => setConfirmDel(p)}
                     className="text-xs font-medium text-destructive hover:underline"
                   >
@@ -147,6 +162,16 @@ export function ProdukManager({
         onClose={() => setConfirmDel(null)}
         onDone={() => {
           setConfirmDel(null);
+          router.refresh();
+        }}
+      />
+
+      <RestockModal
+        key={restocking?.id}
+        row={restocking}
+        onClose={() => setRestocking(null)}
+        onDone={() => {
+          setRestocking(null);
           router.refresh();
         }}
       />
@@ -355,6 +380,140 @@ function DeleteModal({
           {pending ? "Menghapus…" : "Hapus"}
         </Button>
       </div>
+    </Modal>
+  );
+}
+
+function RestockModal({
+  row,
+  onClose,
+  onDone,
+}: {
+  row: ProdukRow | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
+  const [qty, setQty] = useState("");
+  const [hargaBeli, setHargaBeli] = useState(() => String(row?.hargaModal ?? ""));
+  const [error, setError] = useState<string>();
+
+  const qtyNum = Math.floor(Number(qty));
+  const hargaBeliNum = Math.floor(Number(hargaBeli));
+  const preview =
+    row && Number.isFinite(qtyNum) && qtyNum > 0 && Number.isFinite(hargaBeliNum) && hargaBeliNum > 0
+      ? {
+          stokBaru: row.stok + qtyNum,
+          hargaModalBaru: Math.round(
+            (row.stok * row.hargaModal + qtyNum * hargaBeliNum) / (row.stok + qtyNum)
+          ),
+        }
+      : null;
+
+  function handleSubmit() {
+    if (!row) return;
+    setError(undefined);
+    if (!Number.isFinite(qtyNum) || qtyNum <= 0)
+      return setError("Jumlah masuk harus lebih dari 0.");
+    if (!Number.isFinite(hargaBeliNum) || hargaBeliNum <= 0)
+      return setError("Harga beli harus lebih dari 0.");
+
+    const fd = new FormData();
+    fd.set("produkId", row.id);
+    fd.set("qty", String(qtyNum));
+    fd.set("hargaBeli", String(hargaBeliNum));
+    fd.set("tanggal", tanggal);
+    startTransition(async () => {
+      const res = await restockProduk(fd);
+      if (res.ok) onDone();
+      else setError(res.error);
+    });
+  }
+
+  return (
+    <Modal
+      open={!!row}
+      onClose={onClose}
+      title={row ? `Restock — ${row.nama}` : "Restock"}
+    >
+      {row && (
+        <div className="space-y-3">
+          <div className="flex justify-between rounded-xl bg-secondary px-3 py-2 text-sm">
+            <span>Stok saat ini {row.stok}</span>
+            <span>HPP saat ini {formatRupiah(row.hargaModal)}</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <Label className="text-xs">Tanggal</Label>
+              <Input
+                type="date"
+                className="h-10"
+                value={tanggal}
+                onChange={(e) => setTanggal(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Jumlah masuk</Label>
+              <Input
+                className="h-10"
+                inputMode="numeric"
+                value={qty}
+                onChange={(e) => setQty(e.target.value.replace(/[^0-9]/g, ""))}
+                placeholder="0"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Harga beli per unit</Label>
+            <Input
+              className="h-10"
+              inputMode="numeric"
+              value={hargaBeli}
+              onChange={(e) => setHargaBeli(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="0"
+            />
+          </div>
+
+          {preview && (
+            <div className="flex justify-between rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary">
+              <span>Stok baru {preview.stokBaru}</span>
+              <span>HPP baru {formatRupiah(preview.hargaModalBaru)}</span>
+            </div>
+          )}
+
+          {error && <p className="text-sm text-destructive">{error}</p>}
+
+          <Button
+            type="button"
+            className="w-full"
+            disabled={pending}
+            onClick={handleSubmit}
+          >
+            {pending ? "Menyimpan…" : "Simpan Restock"}
+          </Button>
+
+          {row.riwayatRestock.length > 0 && (
+            <div className="space-y-1.5 border-t border-border pt-3">
+              <p className="text-xs font-medium text-muted">Riwayat restock terakhir</p>
+              <ul className="space-y-1.5">
+                {row.riwayatRestock.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex items-center justify-between text-sm text-ink"
+                  >
+                    <span>
+                      +{r.qty} · {formatRupiah(r.hargaBeli)}
+                    </span>
+                    <span className="text-xs text-muted">{r.tanggalLabel}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

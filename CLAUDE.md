@@ -27,6 +27,8 @@ Requires `APP_PASSWORD`, `DATABASE_URL`, `DIRECT_URL` (see `.env.example`). Supa
 
 After changing `prisma/schema.prisma`, run `npm run db:push` locally (it targets the same Supabase database Vercel uses) and redeploy — there is no migration-on-deploy step.
 
+`vercel.json` pins Serverless Function region to `sin1` (Singapore) to match the Supabase project's `ap-southeast-1` region — without this, every DB query from a deployed function crosses the Pacific twice (US-default function region ↔ Singapore DB), which dominates page load time far more than anything query-level. If the Supabase project ever moves region, update this to match.
+
 ## Architecture
 
 **Auth**: single shared password, no user table. `lib/auth.ts` derives a session token as `SHA256("untungin:" + APP_PASSWORD)` using Web Crypto (so the exact same code runs in both the Edge middleware runtime and Node server actions). The token itself, not a random session ID, is stored in the `untungin_session` cookie (httpOnly, 7-day maxAge) — there is no server-side session store. `middleware.ts` gates every route except `/login` (matcher excludes `_next` and files with an extension) and redirects based on `isValidSession`.

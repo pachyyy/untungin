@@ -20,6 +20,22 @@ model Produk {
   updatedAt   DateTime           @updatedAt
   items       PesananItem[]
   paketItems  PesananPaketItem[]
+  restock     Restock[]
+}
+
+// A stock-in event: qty added and the price paid for it. hargaModal on Produk
+// is a running weighted-average cost, recomputed from this at restock time —
+// this row is the audit trail, not itself the source of the current cost.
+model Restock {
+  id        String   @id @default(cuid())
+  produkId  String
+  produk    Produk   @relation(fields: [produkId], references: [id], onDelete: Cascade)
+  qty       Int
+  hargaBeli Int // cost paid per unit for this batch
+  tanggal   DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([produkId, tanggal])
 }
 
 model Supplier {

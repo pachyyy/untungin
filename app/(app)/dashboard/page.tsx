@@ -14,7 +14,7 @@ export default async function DashboardPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [pesananBulanIni, pendingCount, stokMenipis] = await Promise.all([
+  const [pesananBulanIni, pendingCount, stokMenipis, semuaProduk] = await Promise.all([
     prisma.pesanan.findMany({
       where: { createdAt: { gte: monthStart, lt: monthEnd } },
       include: { items: true, pakets: { include: { komponen: true } } },
@@ -25,12 +25,15 @@ export default async function DashboardPage() {
       orderBy: { stok: "asc" },
       take: 10,
     }),
+    prisma.produk.findMany({ select: { stok: true, hargaModal: true } }),
   ]);
 
   // Realized omzet/untung = orders fully paid (lunas) this month.
   const realized = pesananBulanIni.filter((p) => p.status === "lunas");
   const omzet = realized.reduce((s, p) => s + totalPesanan(p), 0);
   const untung = realized.reduce((s, p) => s + untungPesanan(p), 0);
+  // Cost value of everything currently on the shelf — not month-scoped.
+  const nilaiStok = semuaProduk.reduce((s, p) => s + p.stok * p.hargaModal, 0);
 
   return (
     <div>
@@ -49,6 +52,10 @@ export default async function DashboardPage() {
             </p>
           </Card>
           <Card>
+            <p className="text-xs font-medium text-muted">Nilai Stok (HPP)</p>
+            <p className="mt-1 text-lg font-bold text-ink">{formatRupiah(nilaiStok)}</p>
+          </Card>
+          <Card className="col-span-2">
             <p className="text-xs font-medium text-muted">Pesanan pending</p>
             <p className="mt-1 text-lg font-bold text-ink">{pendingCount}</p>
           </Card>
