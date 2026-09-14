@@ -29,7 +29,7 @@ export function ThemeToggle() {
             onClick={() => setTheme(value)}
             aria-pressed={active}
             className={cn(
-              "flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-sm font-semibold transition-colors",
+              "brutal-interactive text-display flex flex-col items-center gap-1.5 rounded-2xl border p-3 text-sm font-semibold transition-colors",
               active
                 ? "border-glass-accent/50 bg-glass-accent/10 text-glass-ink"
                 : "border-panel-border bg-panel text-glass-ink-dim hover:bg-panel-strong"

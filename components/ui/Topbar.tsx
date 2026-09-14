@@ -24,7 +24,7 @@ function ThemeToggleButton() {
     <button
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="flex items-center gap-1.5 rounded-full border border-panel-border bg-panel px-3 py-2 text-[13px] font-semibold text-glass-ink-dim transition-colors hover:bg-panel-strong"
+      className="brutal-interactive text-display flex items-center gap-1.5 rounded-full border border-panel-border bg-panel px-3 py-2 text-[13px] font-semibold text-glass-ink-dim transition-colors hover:bg-panel-strong"
     >
       {isDark ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
       <span className="hidden sm:inline">{isDark ? "Mode Gelap" : "Mode Terang"}</span>
@@ -39,7 +39,7 @@ export function Topbar() {
   return (
     <header className="sticky top-0 z-20 px-4 pt-4 lg:px-5 lg:pt-5">
       <div className="glass-panel flex items-center justify-between gap-3 rounded-[20px] px-4 py-2.5">
-        <h1 className="truncate text-[17px] font-extrabold tracking-tight text-glass-ink lg:text-[19px]">
+        <h1 className="text-display truncate text-[17px] font-extrabold tracking-tight text-glass-ink lg:text-[19px]">
           {title}
         </h1>
 
@@ -47,7 +47,7 @@ export function Topbar() {
           <button
             type="button"
             onClick={open}
-            className="hidden items-center gap-2 rounded-full border border-panel-border bg-panel px-3.5 py-2 text-[13px] text-glass-ink-faint transition-colors hover:bg-panel-strong sm:flex"
+            className="brutal-interactive hidden items-center gap-2 rounded-full border border-panel-border bg-panel px-3.5 py-2 text-[13px] text-glass-ink-faint transition-colors hover:bg-panel-strong sm:flex"
           >
             <Search className="h-3.5 w-3.5" />
             <span>Cari atau jalankan perintah…</span>
@@ -59,7 +59,7 @@ export function Topbar() {
             type="button"
             onClick={open}
             aria-label="Cari"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-panel-border bg-panel text-glass-ink-dim transition-colors hover:bg-panel-strong sm:hidden"
+            className="brutal-interactive flex h-9 w-9 items-center justify-center rounded-full border border-panel-border bg-panel text-glass-ink-dim transition-colors hover:bg-panel-strong sm:hidden"
           >
             <Search className="h-4 w-4" />
           </button>
@@ -70,7 +70,7 @@ export function Topbar() {
             <button
               type="submit"
               aria-label="Keluar"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-glass-accent to-glass-accent2 text-[13px] font-bold text-white"
+              className="brutal-interactive flex h-9 w-9 items-center justify-center rounded-full border border-panel-border bg-gradient-to-br from-glass-accent to-glass-accent2 text-[13px] font-bold text-white"
             >
               U
             </button>

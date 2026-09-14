@@ -189,7 +189,7 @@ export function PesananManager({
                 key={f}
                 onClick={() => setFilter(f)}
                 className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                  "text-display shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
                   filter === f
                     ? "bg-panel-strong text-glass-ink"
                     : "text-glass-ink-faint hover:bg-panel"
@@ -216,7 +216,7 @@ export function PesananManager({
                   key={p.id}
                   onClick={() => selectRow(p.id)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    "brutal-interactive flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
                     active
                       ? "border-panel-border bg-panel-strong"
                       : "border-transparent hover:bg-panel"
@@ -226,7 +226,7 @@ export function PesananManager({
                     <span className="block truncate text-[14px] font-bold text-glass-ink">
                       {p.namaCustomer}
                     </span>
-                    <span className="block text-xs text-glass-ink-dim">
+                    <span className="text-data block text-xs text-glass-ink-dim">
                       {p.tanggal} · {formatRupiah(totalPesanan(p))}
                     </span>
                   </span>
@@ -323,10 +323,10 @@ function PesananDetail({
 
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="truncate text-[20px] font-extrabold text-glass-ink">
+          <h2 className="text-display truncate text-[20px] font-extrabold text-glass-ink">
             {p.namaCustomer}
           </h2>
-          <p className="mt-0.5 text-sm text-glass-ink-dim">
+          <p className="text-data mt-0.5 text-sm text-glass-ink-dim">
             {p.tanggal}
             {p.noHp ? ` · ${p.noHp}` : ""}
           </p>
@@ -349,13 +349,13 @@ function PesananDetail({
           <li key={it.id} className="flex justify-between gap-2 rounded-[12px] bg-panel px-3 py-2">
             <span className="min-w-0 truncate text-glass-ink">
               {!it.produkId && (
-                <span className="mr-1 rounded bg-glass-warning/15 px-1 text-[10px] font-bold uppercase text-glass-warning">
+                <span className="badge-warning text-display mr-1 rounded bg-glass-warning/15 px-1 text-[10px] font-bold uppercase text-glass-warning">
                   Dropship
                 </span>
               )}
-              {it.nama} <span className="text-glass-ink-faint">×{it.jumlah}</span>
+              {it.nama} <span className="text-data text-glass-ink-faint">×{it.jumlah}</span>
             </span>
-            <span className="shrink-0 text-glass-ink-dim">
+            <span className="text-data shrink-0 text-glass-ink-dim">
               {formatRupiah(it.hargaSaat * it.jumlah)}
             </span>
           </li>
@@ -364,12 +364,12 @@ function PesananDetail({
           <li key={pk.id} className="rounded-[12px] bg-glass-accent/[0.08] px-3 py-2">
             <div className="flex justify-between gap-2">
               <span className="min-w-0 truncate font-medium text-glass-ink">
-                <span className="mr-1 rounded bg-glass-accent/15 px-1 text-[10px] font-bold uppercase text-glass-accent">
+                <span className="badge-primary text-display mr-1 rounded bg-glass-accent/15 px-1 text-[10px] font-bold uppercase text-glass-accent">
                   Paket
                 </span>
                 {pk.nama}
               </span>
-              <span className="shrink-0 text-glass-ink-dim">{formatRupiah(pk.harga)}</span>
+              <span className="text-data shrink-0 text-glass-ink-dim">{formatRupiah(pk.harga)}</span>
             </div>
             <p className="mt-0.5 truncate text-xs text-glass-ink-faint">
               {pk.komponen.map((k) => `${k.nama} ×${k.pcs}`).join(" + ")}
@@ -379,12 +379,12 @@ function PesananDetail({
       </ul>
 
       <div className="flex items-center justify-between border-y border-glass-divider py-3 text-sm">
-        <span className="font-bold text-glass-ink">Total {formatRupiah(total)}</span>
-        <span className="font-bold text-glass-success">Untung {formatRupiah(untung)}</span>
+        <span className="text-data font-bold text-glass-ink">Total {formatRupiah(total)}</span>
+        <span className="text-data font-bold text-glass-success">Untung {formatRupiah(untung)}</span>
       </div>
 
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+        <p className="text-display mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
           Pembayaran
         </p>
         {p.pembayaran.length === 0 ? (
@@ -398,11 +398,11 @@ function PesananDetail({
                 key={b.id}
                 className="flex items-center justify-between rounded-[12px] bg-panel px-3 py-2 text-sm"
               >
-                <span className="text-glass-ink-dim">
+                <span className="text-data text-glass-ink-dim">
                   {b.tanggalLabel}
                   {b.metode ? ` · ${b.metode}` : ""}
                 </span>
-                <span className="font-semibold text-glass-ink">{formatRupiah(b.jumlah)}</span>
+                <span className="text-data font-semibold text-glass-ink">{formatRupiah(b.jumlah)}</span>
               </div>
             ))}
           </div>
@@ -1163,7 +1163,7 @@ function PaymentModal({
     >
       {row && (
         <div className="space-y-3">
-          <div className="flex justify-between rounded-[14px] bg-panel-strong px-3 py-2 text-sm text-glass-ink">
+          <div className="text-data flex justify-between rounded-[14px] bg-panel-strong px-3 py-2 text-sm text-glass-ink">
             <span>Total {formatRupiah(total)}</span>
             <span>Dibayar {formatRupiah(dibayar)}</span>
             <span>Sisa {formatRupiah(sisa)}</span>
@@ -1177,11 +1177,11 @@ function PaymentModal({
                   className="flex items-center justify-between gap-2 rounded-[12px] border border-panel-border px-2.5 py-1.5 text-sm"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-glass-ink">
+                    <p className="text-data truncate text-glass-ink">
                       {formatRupiah(b.jumlah)}
                       {b.metode ? ` · ${b.metode}` : ""}
                     </p>
-                    <p className="text-xs text-glass-ink-faint">
+                    <p className="text-data text-xs text-glass-ink-faint">
                       {b.tanggalLabel} · {b.jenis === "cicilan" ? "Cicilan" : "Bayar penuh"}
                     </p>
                   </div>

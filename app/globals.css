@@ -150,6 +150,63 @@
     --blob-3: #e3c4ff;
     --blob-4: #ffc2e0;
   }
+
+  /* Brutalist design mode — same token *names* as glass mode (so every
+     component that already reads bg-panel/text-glass-ink/bg-glass-accent/etc.
+     re-skins for free), just re-pointed at flat/opaque/high-contrast values.
+     --glass-accent2 is set equal to --glass-accent so the gradient utilities
+     glass-mode components already use (bg-gradient-to-br from-accent to-accent2)
+     render as flat fills here, with zero component changes. --accent-ink is
+     brutalist-only: the readable ink color for text/icons sitting on an
+     accent-filled surface (glass mode never needed this — it always used
+     white-on-gradient, which brutalist repoints via the .text-white rule below). */
+  [data-design-mode="brutalist"] {
+    --bg-base: #050505;
+    --panel: #ffffff;
+    --panel-strong: color-mix(in srgb, #ffe600 16%, #ffffff);
+    --panel-border: #050505;
+    --glass-ink: #050505;
+    --glass-ink-dim: rgba(5, 5, 5, 0.62);
+    --glass-ink-faint: rgba(5, 5, 5, 0.42);
+    --glass-accent: #ffe600;
+    --glass-accent2: #ffe600;
+    --glass-success: #00c853;
+    --glass-warning: #ff9100;
+    --glass-danger: #ff3b30;
+    --glass-divider: #050505;
+    --glass-input-bg: #ffffff;
+    --glass-shadow: #ffe600;
+    --glass-scrim: rgba(0, 0, 0, 0.75);
+    --accent-ink: #050505;
+    --blob-1: #ffe600;
+    --blob-2: #00c853;
+    --blob-3: #ff3b30;
+    --blob-4: #f5f5f0;
+  }
+
+  [data-design-mode="brutalist"].light {
+    --bg-base: #f2f0e8;
+    --panel: #050505;
+    --panel-strong: color-mix(in srgb, #ff3b30 18%, #050505);
+    --panel-border: #050505;
+    --glass-ink: #f2f0e8;
+    --glass-ink-dim: rgba(242, 240, 232, 0.65);
+    --glass-ink-faint: rgba(242, 240, 232, 0.45);
+    --glass-accent: #ff3b30;
+    --glass-accent2: #ff3b30;
+    --glass-success: #00a651;
+    --glass-warning: #ff9100;
+    --glass-danger: #ff3b30;
+    --glass-divider: #050505;
+    --glass-input-bg: #050505;
+    --glass-shadow: #ff3b30;
+    --glass-scrim: rgba(0, 0, 0, 0.55);
+    --accent-ink: #f2f0e8;
+    --blob-1: #ff3b30;
+    --blob-2: #00a651;
+    --blob-3: #ffe600;
+    --blob-4: #050505;
+  }
 }
 
 @layer utilities {
@@ -180,6 +237,119 @@
     -webkit-backdrop-filter: blur(20px);
     box-shadow: 0 6px 24px var(--glass-shadow);
   }
+
+  /* Opt-in markers, no-op in glass mode, given real behavior under
+     [data-design-mode="brutalist"] below: .brutal-interactive = hover glitch
+     snap for buttons/cards/nav rows, .text-display = condensed uppercase
+     display type for headings/labels/buttons/nav, .text-data = monospace for
+     prices/dates/counts/ids. */
+  .brutal-interactive {
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+}
+
+/* --- Brutalist mode: shape, shadow, motion, type overrides ---
+   Colors are already handled above (same var names, re-pointed) — this block
+   only overrides what glass mode bakes in as fixed shape (radius/blur/soft
+   shadow) rather than as a variable. */
+[data-design-mode="brutalist"] * {
+  border-radius: 0 !important;
+}
+
+[data-design-mode="brutalist"] .border-panel-border,
+[data-design-mode="brutalist"] [class*="border-glass-accent\/"] {
+  border-width: 3px !important;
+}
+
+[data-design-mode="brutalist"] .glass-panel,
+[data-design-mode="brutalist"] .glass-panel-strong,
+[data-design-mode="brutalist"] .glass-hero {
+  border-width: 3px;
+  border-style: solid;
+  border-color: var(--panel-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  /* .glass-hero's base rule sets `background` (shorthand) to a gradient,
+     which implicitly resets background-color to transparent — overriding
+     only background-image here would leave the hero card transparent over
+     --bg-base, and since --glass-ink is tuned to read against --panel (not
+     --bg-base) the two can end up nearly identical (black-on-black in dark,
+     cream-on-cream in light). Set background-color explicitly instead of
+     background-image so it can't fall back to transparent. */
+  background-color: var(--panel);
+  background-image: none;
+  box-shadow: 6px 6px 0 var(--glass-shadow);
+}
+
+[data-design-mode="brutalist"] .glass-shadow-lg {
+  box-shadow: 10px 10px 0 var(--glass-shadow);
+}
+
+/* Every current use of literal text-white in the app is icon/label text sitting
+   on an accent-filled surface (logo mark, primary buttons, active nav
+   monograms) — brutalist's accent is a bright yellow/red, so it needs dark/
+   light ink instead of white for contrast. */
+[data-design-mode="brutalist"] .text-white {
+  color: var(--accent-ink);
+}
+
+[data-design-mode="brutalist"] .text-display {
+  font-family: "Arial Narrow", "Helvetica Neue Condensed", Arial, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+[data-design-mode="brutalist"] .text-data {
+  font-family: ui-monospace, "SF Mono", "Roboto Mono", monospace;
+}
+
+[data-design-mode="brutalist"] .brutal-interactive {
+  box-shadow: 5px 5px 0 var(--glass-shadow);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-design-mode="brutalist"] .brutal-interactive:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 8px 8px 0 var(--glass-shadow);
+  }
+}
+
+[data-design-mode="brutalist"] .mesh-blob {
+  display: none;
+}
+
+/* Status/stock pills: rectangular (radius already forced to 0 above), 2px
+   border, solid opaque fill instead of glass mode's color-mix translucency,
+   text always high-contrast against the tag's own fill. */
+[data-design-mode="brutalist"] .badge-default,
+[data-design-mode="brutalist"] .badge-primary,
+[data-design-mode="brutalist"] .badge-success,
+[data-design-mode="brutalist"] .badge-warning {
+  border: 2px solid var(--panel-border);
+  color: var(--accent-ink);
+}
+[data-design-mode="brutalist"] .badge-default {
+  background-color: var(--panel-strong);
+  color: var(--glass-ink);
+}
+[data-design-mode="brutalist"] .badge-primary {
+  background-color: var(--glass-accent);
+}
+[data-design-mode="brutalist"] .badge-success {
+  background-color: var(--glass-success);
+}
+[data-design-mode="brutalist"] .badge-warning {
+  background-color: var(--glass-warning);
+}
+
+.brutal-rect {
+  display: none;
+  position: absolute;
+}
+
+[data-design-mode="brutalist"] .brutal-rect {
+  display: block;
 }
 
 @keyframes mesh-float-a {

@@ -1,6 +1,8 @@
-/** Fixed, animated gradient-mesh backdrop for the glass visual language. Purely
- * decorative — sits behind everything at z-[-1]; respects prefers-reduced-motion
- * via the .mesh-blob CSS rules in globals.css. */
+/** Fixed backdrop, shared by both design modes. Glass mode renders the
+ * animated blur-mesh (.mesh-blob, hidden in brutalist via globals.css);
+ * brutalist mode renders a few flat, static, rotated rectangles (.brutal-rect,
+ * hidden in glass mode) — both sets always render, CSS picks which shows, so
+ * there's no client-only mode check / hydration flash. */
 export function BackgroundMesh() {
   return (
     <div
@@ -22,6 +24,19 @@ export function BackgroundMesh() {
       <div
         className="mesh-blob bottom-[-15%] right-[5%] h-[340px] w-[340px] bg-blob-4 opacity-30"
         style={{ animationName: "mesh-float-a", animationDirection: "reverse" }}
+      />
+
+      <div
+        className="brutal-rect left-[-8%] top-[-12%] h-[300px] w-[420px] bg-blob-1 opacity-[0.08]"
+        style={{ transform: "rotate(-8deg)" }}
+      />
+      <div
+        className="brutal-rect right-[-10%] top-[10%] h-[260px] w-[340px] bg-blob-2 opacity-[0.07]"
+        style={{ transform: "rotate(12deg)" }}
+      />
+      <div
+        className="brutal-rect bottom-[-10%] left-[15%] h-[280px] w-[380px] bg-blob-3 opacity-[0.08]"
+        style={{ transform: "rotate(6deg)" }}
       />
     </div>
   );

@@ -4,16 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent/40 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50",
+  "brutal-interactive text-display inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[14px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent/40 focus-visible:ring-offset-0 disabled:pointer-events-none disabled:opacity-50",
   {
     variants: {
       variant: {
-        primary: "bg-gradient-to-br from-glass-accent to-glass-accent2 text-white hover:brightness-105",
-        success: "bg-glass-success/15 text-glass-success hover:bg-glass-success/25",
+        primary:
+          "border border-panel-border bg-gradient-to-br from-glass-accent to-glass-accent2 text-white hover:brightness-105",
+        success:
+          "border border-panel-border bg-glass-success/15 text-glass-success hover:bg-glass-success/25",
         outline:
           "border border-panel-border bg-panel text-glass-ink hover:bg-panel-strong",
         ghost: "text-glass-accent hover:bg-glass-accent/10",
-        danger: "bg-glass-danger/15 text-glass-danger hover:bg-glass-danger/25",
+        danger:
+          "border border-panel-border bg-glass-danger/15 text-glass-danger hover:bg-glass-danger/25",
       },
       size: {
         sm: "h-9 px-3 text-sm",

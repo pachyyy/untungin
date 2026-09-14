@@ -11,7 +11,7 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="flex h-[48px] w-full items-center justify-center rounded-[14px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-[15px] font-bold text-white transition-opacity disabled:opacity-60"
+      className="brutal-interactive text-display flex h-[48px] w-full items-center justify-center rounded-[14px] border border-panel-border bg-gradient-to-br from-glass-accent to-glass-accent2 text-[15px] font-bold text-white transition-opacity disabled:opacity-60"
     >
       {pending ? "Memeriksa…" : "Masuk"}
     </button>
@@ -26,7 +26,7 @@ export function LoginForm() {
       <div>
         <label
           htmlFor="password"
-          className="mb-1.5 block text-sm font-medium text-glass-ink-dim"
+          className="text-display mb-1.5 block text-sm font-medium text-glass-ink-dim"
         >
           Password
         </label>

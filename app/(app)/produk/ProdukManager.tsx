@@ -142,7 +142,7 @@ export function ProdukManager({
                   key={p.id}
                   onClick={() => selectRow(p.id)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    "brutal-interactive flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
                     active
                       ? "border-panel-border bg-panel-strong"
                       : "border-transparent hover:bg-panel"
@@ -152,14 +152,16 @@ export function ProdukManager({
                     <span className="block truncate text-[14px] font-bold text-glass-ink">
                       {p.nama}
                     </span>
-                    <span className="block text-xs text-glass-ink-dim">
+                    <span className="text-data block text-xs text-glass-ink-dim">
                       {formatRupiah(p.hargaModal)}
                     </span>
                   </span>
                   <span
                     className={cn(
-                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold",
-                      low ? "bg-glass-warning/15 text-glass-warning" : "bg-glass-success/15 text-glass-success"
+                      "text-data shrink-0 rounded-full px-2 py-0.5 text-xs font-bold",
+                      low
+                        ? "badge-warning bg-glass-warning/15 text-glass-warning"
+                        : "badge-success bg-glass-success/15 text-glass-success"
                     )}
                   >
                     Stok {p.stok}
@@ -188,7 +190,7 @@ export function ProdukManager({
             </button>
 
             <div>
-              <h2 className="text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
+              <h2 className="text-display text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
               <p className="mt-0.5 text-sm text-glass-ink-dim">
                 Supplier: {selected.supplierNama}
               </p>
@@ -196,27 +198,27 @@ export function ProdukManager({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-[14px] bg-panel-strong p-3">
-                <p className="text-xs text-glass-ink-dim">Harga Modal</p>
-                <p className="mt-1 text-lg font-bold text-glass-ink">
+                <p className="text-display text-xs text-glass-ink-dim">Harga Modal</p>
+                <p className="text-data mt-1 text-lg font-bold text-glass-ink">
                   {formatRupiah(selected.hargaModal)}
                 </p>
               </div>
               <div className="rounded-[14px] bg-panel-strong p-3">
-                <p className="text-xs text-glass-ink-dim">Stok</p>
-                <p className="mt-1 text-lg font-bold text-glass-ink">{selected.stok}</p>
+                <p className="text-display text-xs text-glass-ink-dim">Stok</p>
+                <p className="text-data mt-1 text-lg font-bold text-glass-ink">{selected.stok}</p>
               </div>
             </div>
 
             {selected.riwayatRestock.length > 0 && (
               <div>
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+                <p className="text-display mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
                   Riwayat restock terakhir
                 </p>
                 <ul className="space-y-1.5">
                   {selected.riwayatRestock.map((r) => (
                     <li
                       key={r.id}
-                      className="flex items-center justify-between rounded-[12px] bg-panel px-3 py-2 text-sm text-glass-ink"
+                      className="text-data flex items-center justify-between rounded-[12px] bg-panel px-3 py-2 text-sm text-glass-ink"
                     >
                       <span>
                         +{r.qty} · {formatRupiah(r.hargaBeli)}
@@ -294,7 +296,7 @@ function FilterPill({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+        "text-display rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
         active
           ? "bg-panel-strong text-glass-ink"
           : "text-glass-ink-faint hover:bg-panel"

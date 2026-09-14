@@ -54,7 +54,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
           )}
         >
           {title ? (
-            <DialogPrimitive.Title className="mb-3 pr-8 text-lg font-bold text-glass-ink">
+            <DialogPrimitive.Title className="text-display mb-3 pr-8 text-lg font-bold text-glass-ink">
               {title}
             </DialogPrimitive.Title>
           ) : (

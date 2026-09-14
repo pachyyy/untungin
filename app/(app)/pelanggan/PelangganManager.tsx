@@ -139,7 +139,7 @@ export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
                   key={c.id}
                   onClick={() => selectRow(c.id)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    "brutal-interactive flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
                     active
                       ? "border-panel-border bg-panel-strong"
                       : "border-transparent hover:bg-panel"
@@ -148,7 +148,7 @@ export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
                   <span className="min-w-0 truncate text-[14px] font-bold text-glass-ink">
                     {c.nama}
                   </span>
-                  <span className="shrink-0 text-xs text-glass-ink-dim">
+                  <span className="text-data shrink-0 text-xs text-glass-ink-dim">
                     {c.pesanan.length} pesanan
                   </span>
                 </button>
@@ -175,29 +175,29 @@ export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
             </button>
 
             <div>
-              <h2 className="text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
-              <p className="mt-0.5 text-sm text-glass-ink-dim">
+              <h2 className="text-display text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
+              <p className="text-data mt-0.5 text-sm text-glass-ink-dim">
                 {selected.noHp || "Tanpa nomor HP"}
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-[14px] bg-panel-strong p-3">
-                <p className="text-xs text-glass-ink-dim">Jumlah Pesanan</p>
-                <p className="mt-1 text-lg font-bold text-glass-ink">
+                <p className="text-display text-xs text-glass-ink-dim">Jumlah Pesanan</p>
+                <p className="text-data mt-1 text-lg font-bold text-glass-ink">
                   {selected.pesanan.length}
                 </p>
               </div>
               <div className="rounded-[14px] bg-panel-strong p-3">
-                <p className="text-xs text-glass-ink-dim">Total Belanja</p>
-                <p className="mt-1 text-lg font-bold text-glass-ink">
+                <p className="text-display text-xs text-glass-ink-dim">Total Belanja</p>
+                <p className="text-data mt-1 text-lg font-bold text-glass-ink">
                   {formatRupiah(totalBelanja)}
                 </p>
               </div>
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+              <p className="text-display mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
                 Riwayat pesanan
               </p>
               {selected.pesanan.length === 0 ? (
@@ -210,11 +210,11 @@ export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
                     <button
                       key={p.id}
                       onClick={() => setSheetPesanan(p)}
-                      className="flex w-full items-center justify-between gap-2 rounded-[12px] bg-panel px-3 py-2.5 text-left text-sm transition-colors hover:bg-panel-strong"
+                      className="brutal-interactive flex w-full items-center justify-between gap-2 rounded-[12px] bg-panel px-3 py-2.5 text-left text-sm transition-colors hover:bg-panel-strong"
                     >
-                      <span className="text-glass-ink-dim">{p.tanggal}</span>
+                      <span className="text-data text-glass-ink-dim">{p.tanggal}</span>
                       <span className="flex items-center gap-2">
-                        <span className="font-semibold text-glass-ink">
+                        <span className="text-data font-semibold text-glass-ink">
                           {formatRupiah(totalPesanan(p))}
                         </span>
                         <StatusBadge status={p.status} />
@@ -282,7 +282,7 @@ function PesananDetailSheet({
       {pesanan && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-glass-ink-dim">{pesanan.tanggal}</span>
+            <span className="text-data text-sm text-glass-ink-dim">{pesanan.tanggal}</span>
             <StatusBadge status={pesanan.status} />
           </div>
 
@@ -290,9 +290,9 @@ function PesananDetailSheet({
             {pesanan.items.map((it) => (
               <li key={it.id} className="flex justify-between gap-2">
                 <span className="min-w-0 truncate text-glass-ink">
-                  {it.nama} <span className="text-glass-ink-faint">×{it.jumlah}</span>
+                  {it.nama} <span className="text-data text-glass-ink-faint">×{it.jumlah}</span>
                 </span>
-                <span className="shrink-0 text-glass-ink-dim">
+                <span className="text-data shrink-0 text-glass-ink-dim">
                   {formatRupiah(it.hargaSaat * it.jumlah)}
                 </span>
               </li>
@@ -301,12 +301,12 @@ function PesananDetailSheet({
               <li key={pk.id} className="rounded-[12px] bg-panel-strong px-2 py-1.5">
                 <div className="flex justify-between gap-2">
                   <span className="min-w-0 truncate font-medium text-glass-ink">
-                    <span className="mr-1 rounded bg-glass-accent/15 px-1 text-[10px] font-bold uppercase text-glass-accent">
+                    <span className="badge-primary text-display mr-1 rounded bg-glass-accent/15 px-1 text-[10px] font-bold uppercase text-glass-accent">
                       Paket
                     </span>
                     {pk.nama}
                   </span>
-                  <span className="shrink-0 text-glass-ink-dim">{formatRupiah(pk.harga)}</span>
+                  <span className="text-data shrink-0 text-glass-ink-dim">{formatRupiah(pk.harga)}</span>
                 </div>
                 <p className="mt-0.5 truncate text-xs text-glass-ink-faint">
                   {pk.komponen.map((k) => `${k.nama} ×${k.pcs}`).join(" + ")}
@@ -316,10 +316,10 @@ function PesananDetailSheet({
           </ul>
 
           <div className="flex items-center justify-between border-t border-glass-divider pt-2 text-sm">
-            <span className="font-semibold text-glass-ink">
+            <span className="text-data font-semibold text-glass-ink">
               Total {formatRupiah(total)}
             </span>
-            <span className="font-semibold text-glass-success">
+            <span className="text-data font-semibold text-glass-success">
               Untung {formatRupiah(untung)}
             </span>
           </div>

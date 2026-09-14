@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatRupiah } from "@/lib/format";
+import { useDesignMode } from "@/components/DesignModeProvider";
 
 type Point = { label: string; untung: number; omzet: number };
 
@@ -20,6 +21,9 @@ function compact(n: number): string {
 }
 
 export function LaporanChart({ data }: { data: Point[] }) {
+  const { mode } = useDesignMode();
+  const brutalist = mode === "brutalist";
+
   return (
     <div className="h-64 w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -50,17 +54,35 @@ export function LaporanChart({ data }: { data: Point[] }) {
               formatRupiah(value),
               name === "untung" ? "Untung" : "Omzet",
             ]}
-            contentStyle={{
-              borderRadius: 14,
-              border: "1px solid var(--panel-border)",
-              background: "var(--panel-strong)",
-              backdropFilter: "blur(20px)",
-              color: "var(--glass-ink)",
-              fontSize: 13,
-            }}
+            contentStyle={
+              brutalist
+                ? {
+                    borderRadius: 0,
+                    border: "3px solid var(--panel-border)",
+                    background: "var(--panel)",
+                    boxShadow: "5px 5px 0 var(--glass-shadow)",
+                    color: "var(--glass-ink)",
+                    fontSize: 13,
+                  }
+                : {
+                    borderRadius: 14,
+                    border: "1px solid var(--panel-border)",
+                    background: "var(--panel-strong)",
+                    backdropFilter: "blur(20px)",
+                    color: "var(--glass-ink)",
+                    fontSize: 13,
+                  }
+            }
             labelStyle={{ color: "var(--glass-ink)" }}
           />
-          <Bar dataKey="untung" fill="url(#untungGradient)" radius={[6, 6, 0, 0]} maxBarSize={44} />
+          <Bar
+            dataKey="untung"
+            fill="url(#untungGradient)"
+            stroke={brutalist ? "var(--panel-border)" : undefined}
+            strokeWidth={brutalist ? 2 : 0}
+            radius={brutalist ? [0, 0, 0, 0] : [6, 6, 0, 0]}
+            maxBarSize={44}
+          />
         </BarChart>
       </ResponsiveContainer>
     </div>

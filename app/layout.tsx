@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { DesignModeProvider, DesignModeScript } from "@/components/DesignModeProvider";
 import "./globals.css";
 
 const inter = Inter({
@@ -40,6 +41,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <DesignModeScript />
+      </head>
       <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
@@ -47,7 +51,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          {children}
+          <DesignModeProvider>{children}</DesignModeProvider>
         </ThemeProvider>
       </body>
     </html>

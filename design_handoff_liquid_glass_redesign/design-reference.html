@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    @keyframes blobFloatA { 0%{ transform: translate(0,0) scale(1); } 50%{ transform: translate(40px,-30px) scale(1.08); } 100%{ transform: translate(0,0) scale(1); } }
+    @keyframes blobFloatB { 0%{ transform: translate(0,0) scale(1); } 50%{ transform: translate(-35px,30px) scale(1.06); } 100%{ transform: translate(0,0) scale(1); } }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 8px; }
+    input::placeholder { color: inherit; opacity: 0.5; }
+  </style>
+</helmet>
+<div style="min-height:100dvh;position:relative;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:var(--bg-base);color:var(--ink);{{ themeVars }}">
+  <div style="position:absolute;top:-140px;left:-110px;width:440px;height:440px;border-radius:50%;background:var(--blob1, #5b6bff);filter:blur(95px);opacity:0.55;animation:blobFloatA 20s ease-in-out infinite;pointer-events:none;"></div>
+  <div style="position:absolute;top:8%;right:-150px;width:400px;height:400px;border-radius:50%;background:var(--blob2, #22d3ee);filter:blur(105px);opacity:0.4;animation:blobFloatB 24s ease-in-out infinite;pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-170px;left:18%;width:480px;height:480px;border-radius:50%;background:var(--blob3, #c084fc);filter:blur(115px);opacity:0.4;animation:blobFloatA 28s ease-in-out infinite reverse;pointer-events:none;"></div>
+  <div style="position:absolute;bottom:6%;right:12%;width:320px;height:320px;border-radius:50%;background:var(--blob4, #ec4899);filter:blur(95px);opacity:0.3;animation:blobFloatB 22s ease-in-out infinite reverse;pointer-events:none;"></div>
+
+  <sc-if value="{{ isLoginScreen }}" hint-placeholder-val="{{ true }}">
+    <div style="position:relative;z-index:1;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px;">
+      <div style="width:100%;max-width:400px;background:var(--panel);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);border:1px solid var(--panel-border);border-radius:28px;padding:40px 32px;box-shadow:0 24px 60px var(--shadow);">
+        <div style="width:52px;height:52px;border-radius:16px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:20px;margin-bottom:20px;">U</div>
+        <h1 style="margin:0 0 6px;font-size:26px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;">Untungin</h1>
+        <p style="margin:0 0 28px;font-size:14px;color:var(--ink-dim);line-height:1.5;">Masuk untuk kelola produk, pesanan, dan laporan untungmu.</p>
+        <form onSubmit="{{ handleLogin }}" style="display:flex;flex-direction:column;gap:14px;">
+          <div>
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--ink-dim);margin-bottom:6px;">Password</label>
+            <input type="password" value="{{ password }}" onChange="{{ onPasswordChange }}" placeholder="Masukkan password aplikasi" style="width:100%;height:48px;padding:0 16px;border-radius:14px;border:1px solid var(--divider);background:var(--input-bg);color:var(--ink);font-size:15px;outline:none;" />
+          </div>
+          <sc-if value="{{ loginError }}" hint-placeholder-val="{{ false }}">
+            <p style="margin:0;font-size:13px;color:var(--danger);">{{ loginError }}</p>
+          </sc-if>
+          <button type="submit" style="height:48px;border-radius:14px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;">Masuk</button>
+        </form>
+        <p style="margin:20px 0 0;font-size:12px;color:var(--ink-faint);text-align:center;">Sesi berlaku 7 hari di perangkat ini.</p>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ loggedIn }}" hint-placeholder-val="{{ false }}">
+    <div style="{{ shellStyle }}">
+      <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+        <aside style="width:220px;flex-shrink:0;padding:20px 14px;">
+          <div style="background:var(--panel);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);border:1px solid var(--panel-border);border-radius:24px;padding:16px 10px;box-shadow:0 12px 40px var(--shadow);display:flex;flex-direction:column;height:calc(100dvh - 40px);">
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 8px 18px;">
+              <div style="width:34px;height:34px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;flex-shrink:0;">U</div>
+              <span style="font-weight:800;font-size:16px;color:var(--ink);letter-spacing:-0.01em;">Untungin</span>
+            </div>
+            <nav style="display:flex;flex-direction:column;gap:4px;flex:1;overflow-y:auto;">
+              <sc-for list="{{ nav }}" as="item" hint-placeholder-count="7">
+                <div onClick="{{ item.onClick }}" style="{{ item.style }}">
+                  <span style="{{ item.monoStyle }}">{{ item.mono }}</span>
+                  <span style="font-size:14px;">{{ item.label }}</span>
+                </div>
+              </sc-for>
+            </nav>
+            <div style="margin-top:8px;padding-top:14px;border-top:1px solid var(--divider);">
+              <div style="font-size:11px;color:var(--ink-faint);line-height:1.7;padding:4px 8px;">
+                <div>⌘K &nbsp;Cari cepat</div>
+                <div>Esc &nbsp;Tutup panel</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </sc-if>
+
+      <div style="{{ mainColStyle }}">
+        <header style="{{ headerStyle }}">
+          <h2 style="margin:0;font-size:19px;font-weight:800;color:var(--ink);letter-spacing:-0.01em;flex-shrink:0;">{{ activeNavLabel }}</h2>
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ openCmd }}" style="flex:1;max-width:380px;height:38px;border-radius:12px;border:1px solid var(--divider);background:var(--input-bg);color:var(--ink-faint);font-size:13px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;cursor:pointer;">
+              <span>Cari atau jalankan perintah…</span>
+              <span style="background:var(--panel-strong);border-radius:6px;padding:2px 6px;font-size:11px;font-weight:700;color:var(--ink-dim);">⌘K</span>
+            </button>
+          </sc-if>
+          <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+            <button onClick="{{ openCmd }}" style="width:36px;height:36px;flex-shrink:0;border-radius:11px;border:1px solid var(--divider);background:var(--input-bg);color:var(--ink-dim);font-size:14px;cursor:pointer;">⌕</button>
+          </sc-if>
+          <div style="flex:1;"></div>
+          <button onClick="{{ toggleTheme }}" style="height:36px;flex-shrink:0;border-radius:11px;border:1px solid var(--divider);background:var(--panel-strong);color:var(--ink);font-size:12px;font-weight:700;padding:0 14px;cursor:pointer;">{{ themeToggleLabel }}</button>
+          <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ true }}">
+            <button onClick="{{ handleLogout }}" style="width:36px;height:36px;flex-shrink:0;border-radius:11px;background:var(--panel-strong);border:1px solid var(--divider);color:var(--ink-dim);font-size:12px;font-weight:800;cursor:pointer;">U</button>
+          </sc-if>
+        </header>
+
+        <main style="flex:1;min-height:0;overflow-y:auto;padding-bottom:{{ mainBottomPad }};">
+
+          <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="background:linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, var(--panel)), color-mix(in srgb, var(--accent2) 24%, var(--panel)));backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px);border:1px solid var(--panel-border);border-radius:22px;padding:24px;box-shadow:0 10px 40px var(--shadow);">
+                <p style="margin:0;font-size:13px;color:var(--ink-dim);font-weight:600;">Untung bulan ini</p>
+                <p style="margin:8px 0 0;font-size:38px;font-weight:800;color:var(--ink);letter-spacing:-0.02em;">{{ untungBulanIniFmt }}</p>
+                <p style="margin:6px 0 0;font-size:12px;color:var(--ink-faint);">Dari pesanan lunas</p>
+              </div>
+
+              <div style="{{ statGridStyle }}">
+                <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:18px;padding:16px;box-shadow:0 6px 24px var(--shadow);">
+                  <p style="margin:0;font-size:12px;font-weight:600;color:var(--ink-dim);">Omzet bulan ini</p>
+                  <p style="margin:6px 0 0;font-size:20px;font-weight:800;color:var(--ink);">{{ omzetBulanIniFmt }}</p>
+                </div>
+                <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:18px;padding:16px;box-shadow:0 6px 24px var(--shadow);">
+                  <p style="margin:0;font-size:12px;font-weight:600;color:var(--ink-dim);">Nilai Stok (HPP)</p>
+                  <p style="margin:6px 0 0;font-size:20px;font-weight:800;color:var(--ink);">{{ nilaiStokFmt }}</p>
+                </div>
+                <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:18px;padding:16px;box-shadow:0 6px 24px var(--shadow);">
+                  <p style="margin:0;font-size:12px;font-weight:600;color:var(--ink-dim);">Pesanan pending</p>
+                  <p style="margin:6px 0 0;font-size:20px;font-weight:800;color:var(--ink);">{{ pendingCount }}</p>
+                </div>
+              </div>
+
+              <div style="{{ quickGridStyle }}">
+                <div onClick="{{ goToPesananNew }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:18px;padding:16px;box-shadow:0 6px 24px var(--shadow);">
+                  <span style="width:38px;height:38px;border-radius:12px;background:color-mix(in srgb, var(--accent) 22%, transparent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0;">+</span>
+                  <span style="font-weight:700;color:var(--ink);font-size:14px;">Tambah Pesanan</span>
+                </div>
+                <div onClick="{{ goToProdukNew }}" style="cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:18px;padding:16px;box-shadow:0 6px 24px var(--shadow);">
+                  <span style="width:38px;height:38px;border-radius:12px;background:color-mix(in srgb, var(--success) 22%, transparent);color:var(--success);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0;">+</span>
+                  <span style="font-weight:700;color:var(--ink);font-size:14px;">Tambah Produk</span>
+                </div>
+              </div>
+
+              <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                  <h3 style="margin:0;font-size:15px;font-weight:800;color:var(--ink);">Stok menipis</h3>
+                  <span onClick="{{ goToProdukNew }}" style="font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;">Lihat semua</span>
+                </div>
+                <sc-if value="{{ hasStokMenipis }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:8px;">
+                    <sc-for list="{{ stokMenipis }}" as="p" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel);backdrop-filter:blur(18px);border:1px solid var(--panel-border);border-left:3px solid var(--warning);border-radius:14px;padding:12px 14px;box-shadow:0 6px 20px var(--shadow);">
+                        <span style="font-weight:600;color:var(--ink);font-size:13.5px;">{{ p.nama }}</span>
+                        <span style="font-size:12px;font-weight:800;color:var(--warning);background:color-mix(in srgb, var(--warning) 16%, transparent);padding:3px 10px;border-radius:999px;">Sisa {{ p.stok }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ noStokMenipis }}" hint-placeholder-val="{{ false }}">
+                  <div style="text-align:center;font-size:13px;color:var(--ink-dim);background:var(--panel);border:1px solid var(--panel-border);border-radius:16px;padding:20px;">Semua stok aman</div>
+                </sc-if>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isProduk }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ splitRowStyle }}">
+              <sc-if value="{{ showListProduk }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ listPaneStyle }}">
+                  <input placeholder="Cari produk…" value="{{ produkQuery }}" onChange="{{ onProdukQueryChange }}" style="{{ inputStyle }}" />
+                  <div style="display:flex;gap:8px;overflow-x:auto;">
+                    <sc-for list="{{ produkFilters }}" as="f" hint-placeholder-count="2">
+                      <button onClick="{{ f.onClick }}" style="{{ f.pillStyle }}">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                  <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;flex:1;">
+                    <sc-for list="{{ filteredProduk }}" as="p" hint-placeholder-count="5">
+                      <div onClick="{{ p.onSelect }}" style="{{ p.rowStyle }}">
+                        <div style="min-width:0;">
+                          <div style="font-weight:700;color:var(--ink);font-size:14px;">{{ p.nama }}</div>
+                          <div style="font-size:12px;color:var(--ink-dim);margin-top:2px;">{{ p.hargaJualFmt }}</div>
+                        </div>
+                        <span style="{{ p.stokBadgeStyle }}">Stok {{ p.stok }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ showDetailProduk }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ detailPaneStyle }}">
+                  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ clearProduk }}" style="display:inline-block;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;">‹ Semua produk</span>
+                  </sc-if>
+                  <sc-if value="{{ hasSelectedProduk }}" hint-placeholder-val="{{ true }}">
+                    <h3 style="margin:0 0 4px;font-size:22px;font-weight:800;color:var(--ink);">{{ selectedProduk.nama }}</h3>
+                    <p style="margin:0 0 20px;font-size:13px;color:var(--ink-dim);">Supplier: {{ selectedProduk.supplier }}</p>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;">
+                      <div style="background:var(--panel-strong);border-radius:14px;padding:14px;"><p style="margin:0;font-size:11.5px;color:var(--ink-dim);">Harga Jual</p><p style="margin:5px 0 0;font-size:17px;font-weight:800;color:var(--ink);">{{ selectedProduk.hargaJualFmt }}</p></div>
+                      <div style="background:var(--panel-strong);border-radius:14px;padding:14px;"><p style="margin:0;font-size:11.5px;color:var(--ink-dim);">Harga Modal</p><p style="margin:5px 0 0;font-size:17px;font-weight:800;color:var(--ink);">{{ selectedProduk.hargaModalFmt }}</p></div>
+                      <div style="background:var(--panel-strong);border-radius:14px;padding:14px;"><p style="margin:0;font-size:11.5px;color:var(--ink-dim);">Margin</p><p style="margin:5px 0 0;font-size:17px;font-weight:800;color:var(--success);">{{ selectedProduk.margin }}%</p></div>
+                      <div style="background:var(--panel-strong);border-radius:14px;padding:14px;"><p style="margin:0;font-size:11.5px;color:var(--ink-dim);">Stok</p><p style="margin:5px 0 0;font-size:17px;font-weight:800;color:var(--ink);">{{ selectedProduk.stok }} pcs</p></div>
+                    </div>
+                    <div style="display:flex;gap:10px;">
+                      <button style="flex:1;height:44px;border-radius:13px;border:1px solid var(--divider);background:var(--panel-strong);color:var(--ink);font-weight:700;font-size:13.5px;cursor:pointer;">Edit Produk</button>
+                      <button style="height:44px;padding:0 18px;border-radius:13px;border:none;background:color-mix(in srgb, var(--danger) 16%, transparent);color:var(--danger);font-weight:700;font-size:13.5px;cursor:pointer;">Hapus</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ noSelectedProduk }}" hint-placeholder-val="{{ false }}">
+                    <div style="text-align:center;padding:60px 20px;color:var(--ink-dim);font-size:13.5px;">Pilih produk untuk melihat detail.</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isPesanan }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ splitRowStyle }}">
+              <sc-if value="{{ showListPesanan }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ listPaneStyle }}">
+                  <input placeholder="Cari customer atau produk…" value="{{ pesananQuery }}" onChange="{{ onPesananQueryChange }}" style="{{ inputStyle }}" />
+                  <div style="display:flex;gap:8px;overflow-x:auto;">
+                    <sc-for list="{{ pesananFilters }}" as="f" hint-placeholder-count="4">
+                      <button onClick="{{ f.onClick }}" style="{{ f.pillStyle }}">{{ f.label }}</button>
+                    </sc-for>
+                  </div>
+                  <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;flex:1;">
+                    <sc-for list="{{ filteredPesanan }}" as="o" hint-placeholder-count="5">
+                      <div onClick="{{ o.onSelect }}" style="{{ o.rowStyle }}">
+                        <div style="min-width:0;">
+                          <div style="font-weight:700;color:var(--ink);font-size:14px;">{{ o.namaCustomer }}</div>
+                          <div style="font-size:12px;color:var(--ink-dim);margin-top:2px;">{{ o.tanggal }} · {{ o.totalFmt }}</div>
+                        </div>
+                        <span style="{{ o.statusStyle }}">{{ o.statusLabel }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ showDetailPesanan }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ detailPaneStyle }}">
+                  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ clearPesanan }}" style="display:inline-block;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;">‹ Semua pesanan</span>
+                  </sc-if>
+                  <sc-if value="{{ hasSelectedPesanan }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:4px;">
+                      <div>
+                        <h3 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);">{{ selectedPesanan.namaCustomer }}</h3>
+                        <p style="margin:4px 0 0;font-size:12.5px;color:var(--ink-dim);">{{ selectedPesanan.tanggal }}</p>
+                      </div>
+                      <span style="{{ selectedPesanan.statusStyle }}">{{ selectedPesanan.statusLabel }}</span>
+                    </div>
+
+                    <div style="margin:16px 0;display:flex;flex-direction:column;gap:8px;">
+                      <sc-for list="{{ selectedPesanan.itemsFmt }}" as="it" hint-placeholder-count="1">
+                        <div style="display:flex;justify-content:space-between;gap:8px;padding:10px 12px;background:var(--panel-strong);border-radius:12px;font-size:13.5px;">
+                          <span style="color:var(--ink);">{{ it.nama }} <span style="color:var(--ink-dim);">×{{ it.jumlah }}</span></span>
+                          <span style="color:var(--ink-dim);">{{ it.subtotalFmt }}</span>
+                        </div>
+                      </sc-for>
+                      <sc-for list="{{ selectedPesanan.paketsFmt }}" as="pk" hint-placeholder-count="0">
+                        <div style="padding:10px 12px;background:color-mix(in srgb, var(--accent) 10%, var(--panel-strong));border-radius:12px;font-size:13.5px;">
+                          <div style="display:flex;justify-content:space-between;gap:8px;font-weight:700;color:var(--ink);"><span>{{ pk.nama }}</span><span>{{ pk.hargaFmt }}</span></div>
+                          <div style="margin-top:3px;font-size:11.5px;color:var(--ink-dim);">{{ pk.komponenLabel }}</div>
+                        </div>
+                      </sc-for>
+                    </div>
+
+                    <div style="display:flex;justify-content:space-between;padding:12px 0;border-top:1px solid var(--divider);border-bottom:1px solid var(--divider);margin-bottom:12px;">
+                      <span style="font-weight:700;color:var(--ink);font-size:14px;">Total {{ selectedPesanan.totalFmt }}</span>
+                      <span style="font-weight:700;color:var(--success);font-size:14px;">Untung {{ selectedPesanan.untungFmt }}</span>
+                    </div>
+
+                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.04em;">Pembayaran</p>
+                    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:18px;">
+                      <sc-for list="{{ selectedPesanan.pembayaranFmt }}" as="b" hint-placeholder-count="1">
+                        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--ink-dim);">
+                          <span>{{ b.tanggal }} · {{ b.metode }}</span>
+                          <span style="color:var(--ink);font-weight:600;">{{ b.jumlahFmt }}</span>
+                        </div>
+                      </sc-for>
+                      <sc-if value="{{ selectedPesanan.noPembayaran }}" hint-placeholder-val="{{ false }}">
+                        <p style="margin:0;font-size:12.5px;color:var(--ink-faint);">Belum ada pembayaran.</p>
+                      </sc-if>
+                    </div>
+
+                    <div style="display:flex;gap:10px;">
+                      <button style="flex:1;height:44px;border-radius:13px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;font-size:13.5px;cursor:pointer;">Kelola Pembayaran</button>
+                      <button style="height:44px;padding:0 18px;border-radius:13px;border:1px solid var(--divider);background:var(--panel-strong);color:var(--ink);font-weight:700;font-size:13.5px;cursor:pointer;">Edit</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ noSelectedPesanan }}" hint-placeholder-val="{{ false }}">
+                    <div style="text-align:center;padding:60px 20px;color:var(--ink-dim);font-size:13.5px;">Pilih pesanan untuk melihat detail.</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isSupplier }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ splitRowStyle }}">
+              <sc-if value="{{ showListSupplier }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ listPaneStyle }}">
+                  <input placeholder="Cari supplier…" value="{{ supplierQuery }}" onChange="{{ onSupplierQueryChange }}" style="{{ inputStyle }}" />
+                  <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;flex:1;">
+                    <sc-for list="{{ filteredSupplier }}" as="sp" hint-placeholder-count="4">
+                      <div onClick="{{ sp.onSelect }}" style="{{ sp.rowStyle }}">
+                        <div style="min-width:0;">
+                          <div style="font-weight:700;color:var(--ink);font-size:14px;">{{ sp.nama }}</div>
+                          <div style="font-size:12px;color:var(--ink-dim);margin-top:2px;">{{ sp.jumlahProdukCount }} produk</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ showDetailSupplier }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ detailPaneStyle }}">
+                  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ clearSupplier }}" style="display:inline-block;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;">‹ Semua supplier</span>
+                  </sc-if>
+                  <sc-if value="{{ hasSelectedSupplier }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px;">
+                      <h3 style="margin:0;font-size:22px;font-weight:800;color:var(--ink);">{{ selectedSupplier.nama }}</h3>
+                      <a href="{{ selectedSupplier.waHref }}" style="height:38px;padding:0 16px;border-radius:12px;background:color-mix(in srgb, var(--success) 20%, transparent);color:var(--success);font-weight:700;font-size:12.5px;display:flex;align-items:center;text-decoration:none;">Hubungi WA</a>
+                    </div>
+                    <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.04em;">Produk dari supplier ini</p>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                      <sc-for list="{{ selectedSupplier.products }}" as="p" hint-placeholder-count="2">
+                        <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--panel-strong);border-radius:12px;font-size:13.5px;">
+                          <span style="color:var(--ink);">{{ p.nama }}</span>
+                          <span style="color:var(--ink-dim);">{{ p.hargaJualFmt }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ noSelectedSupplier }}" hint-placeholder-val="{{ false }}">
+                    <div style="text-align:center;padding:60px 20px;color:var(--ink-dim);font-size:13.5px;">Pilih supplier untuk melihat detail.</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isPelanggan }}" hint-placeholder-val="{{ false }}">
+            <div style="{{ splitRowStyle }}">
+              <sc-if value="{{ showListPelanggan }}" hint-placeholder-val="{{ true }}">
+                <div style="{{ listPaneStyle }}">
+                  <input placeholder="Cari pelanggan…" value="{{ pelangganQuery }}" onChange="{{ onPelangganQueryChange }}" style="{{ inputStyle }}" />
+                  <div style="overflow-y:auto;display:flex;flex-direction:column;gap:6px;flex:1;">
+                    <sc-for list="{{ filteredPelanggan }}" as="c" hint-placeholder-count="4">
+                      <div onClick="{{ c.onSelect }}" style="{{ c.rowStyle }}">
+                        <div style="min-width:0;">
+                          <div style="font-weight:700;color:var(--ink);font-size:14px;">{{ c.nama }}</div>
+                          <div style="font-size:12px;color:var(--ink-dim);margin-top:2px;">{{ c.jumlahPesanan }} pesanan</div>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ showDetailPelanggan }}" hint-placeholder-val="{{ false }}">
+                <div style="{{ detailPaneStyle }}">
+                  <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+                    <span onClick="{{ clearPelanggan }}" style="display:inline-block;margin-bottom:14px;font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;">‹ Semua pelanggan</span>
+                  </sc-if>
+                  <sc-if value="{{ hasSelectedPelanggan }}" hint-placeholder-val="{{ true }}">
+                    <h3 style="margin:0 0 4px;font-size:22px;font-weight:800;color:var(--ink);">{{ selectedPelanggan.nama }}</h3>
+                    <p style="margin:0 0 20px;font-size:13px;color:var(--ink-dim);">{{ selectedPelanggan.noHpLabel }}</p>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:18px;">
+                      <div style="background:var(--panel-strong);border-radius:14px;padding:14px;"><p style="margin:0;font-size:11.5px;color:var(--ink-dim);">Jumlah Pesanan</p><p style="margin:5px 0 0;font-size:17px;font-weight:800;color:var(--ink);">{{ selectedPelanggan.jumlahPesanan }}</p></div>
+                      <div style="background:var(--panel-strong);border-radius:14px;padding:14px;"><p style="margin:0;font-size:11.5px;color:var(--ink-dim);">Total Belanja</p><p style="margin:5px 0 0;font-size:17px;font-weight:800;color:var(--ink);">{{ selectedPelanggan.totalBelanjaFmt }}</p></div>
+                    </div>
+                    <p style="margin:0 0 10px;font-size:12px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:0.04em;">Riwayat pesanan</p>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                      <sc-for list="{{ selectedPelanggan.riwayat }}" as="o" hint-placeholder-count="2">
+                        <div style="display:flex;justify-content:space-between;padding:10px 12px;background:var(--panel-strong);border-radius:12px;font-size:13.5px;">
+                          <span style="color:var(--ink);">{{ o.tanggal }}</span>
+                          <span style="color:var(--ink-dim);">{{ o.totalFmt }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ noSelectedPelanggan }}" hint-placeholder-val="{{ false }}">
+                    <div style="text-align:center;padding:60px 20px;color:var(--ink-dim);font-size:13.5px;">Pilih pelanggan untuk melihat detail.</div>
+                  </sc-if>
+                </div>
+              </sc-if>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isLaporan }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div style="display:flex;gap:8px;">
+                <sc-for list="{{ laporanRanges }}" as="r" hint-placeholder-count="3">
+                  <button onClick="{{ r.onClick }}" style="{{ r.pillStyle }}">{{ r.label }}</button>
+                </sc-for>
+              </div>
+              <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:20px;padding:20px;box-shadow:0 6px 24px var(--shadow);">
+                <p style="margin:0 0 4px;font-size:12px;font-weight:600;color:var(--ink-dim);">Untung periode ini</p>
+                <p style="margin:0 0 20px;font-size:26px;font-weight:800;color:var(--ink);">{{ totalUntungRangeFmt }}</p>
+                <div style="display:flex;align-items:flex-end;gap:10px;height:140px;">
+                  <sc-for list="{{ chart }}" as="c" hint-placeholder-count="6">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;height:100%;justify-content:flex-end;">
+                      <div style="{{ c.barStyle }}"></div>
+                      <span style="font-size:11px;color:var(--ink-dim);font-weight:600;">{{ c.bulan }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <h3 style="margin:0 0 10px;font-size:15px;font-weight:800;color:var(--ink);">Produk terlaris</h3>
+                <div style="display:flex;flex-direction:column;gap:6px;">
+                  <sc-for list="{{ topProdukRanked }}" as="t" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:12px;background:var(--panel);backdrop-filter:blur(18px);border:1px solid var(--panel-border);border-radius:14px;padding:12px 14px;box-shadow:0 6px 20px var(--shadow);">
+                      <span style="width:26px;height:26px;border-radius:9px;background:var(--panel-strong);color:var(--ink-dim);font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">{{ t.rank }}</span>
+                      <span style="flex:1;font-weight:600;color:var(--ink);font-size:13.5px;">{{ t.nama }}</span>
+                      <span style="font-size:12.5px;color:var(--ink-dim);">{{ t.terjual }} terjual</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isSettings }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;flex-direction:column;gap:16px;max-width:560px;">
+              <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:20px;padding:20px;box-shadow:0 6px 24px var(--shadow);">
+                <h3 style="margin:0 0 4px;font-size:15px;font-weight:800;color:var(--ink);">Tampilan</h3>
+                <p style="margin:0 0 14px;font-size:12.5px;color:var(--ink-dim);">Pilih mode terang atau gelap.</p>
+                <div style="display:flex;gap:8px;">
+                  <button onClick="{{ setLight }}" style="{{ lightPillStyle }}">Terang</button>
+                  <button onClick="{{ setDark }}" style="{{ darkPillStyle }}">Gelap</button>
+                </div>
+              </div>
+              <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:20px;padding:20px;box-shadow:0 6px 24px var(--shadow);">
+                <h3 style="margin:0 0 4px;font-size:15px;font-weight:800;color:var(--ink);">Password Aplikasi</h3>
+                <p style="margin:0 0 14px;font-size:12.5px;color:var(--ink-dim);">Ubah password login satu-pintu untuk aplikasi ini.</p>
+                <input type="password" placeholder="Password baru" style="{{ inputStyle }}" />
+                <button style="margin-top:10px;height:42px;padding:0 18px;border-radius:12px;border:none;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;font-weight:700;font-size:13px;cursor:pointer;">Simpan Password</button>
+              </div>
+              <div style="background:var(--panel);backdrop-filter:blur(20px);border:1px solid var(--panel-border);border-radius:20px;padding:20px;box-shadow:0 6px 24px var(--shadow);">
+                <h3 style="margin:0 0 4px;font-size:15px;font-weight:800;color:var(--ink);">Sesi</h3>
+                <p style="margin:0 0 14px;font-size:12.5px;color:var(--ink-dim);">Login aktif di perangkat ini · sesi berlaku 7 hari.</p>
+                <button onClick="{{ handleLogout }}" style="height:42px;padding:0 18px;border-radius:12px;border:none;background:color-mix(in srgb, var(--danger) 16%, transparent);color:var(--danger);font-weight:700;font-size:13px;cursor:pointer;">Keluar</button>
+              </div>
+            </div>
+          </sc-if>
+
+        </main>
+      </div>
+    </div>
+
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ false }}">
+      <nav style="position:fixed;left:0;right:0;bottom:12px;z-index:40;display:flex;justify-content:center;padding:0 12px;">
+        <div style="display:flex;gap:2px;background:var(--panel-strong);backdrop-filter:blur(26px);-webkit-backdrop-filter:blur(26px);border:1px solid var(--panel-border);border-radius:20px;padding:6px;box-shadow:0 12px 40px var(--shadow);overflow-x:auto;max-width:100%;">
+          <sc-for list="{{ nav }}" as="item" hint-placeholder-count="7">
+            <div onClick="{{ item.onClick }}" style="{{ item.mobileStyle }}">
+              <span style="{{ item.monoStyle }}">{{ item.mono }}</span>
+              <span style="font-size:10px;font-weight:700;">{{ item.label }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </nav>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ cmdOpen }}" hint-placeholder-val="{{ false }}">
+    <div onClick="{{ closeCmd }}" style="position:fixed;inset:0;z-index:60;background:var(--scrim);backdrop-filter:blur(6px);display:flex;align-items:flex-start;justify-content:center;padding-top:14vh;">
+      <div onClick="{{ stopPropagation }}" style="width:100%;max-width:520px;margin:0 20px;background:var(--panel-strong);backdrop-filter:blur(30px);-webkit-backdrop-filter:blur(30px);border:1px solid var(--panel-border);border-radius:20px;box-shadow:0 30px 80px var(--shadow);overflow:hidden;">
+        <input autoFocus="{{ true }}" placeholder="Ketik perintah atau layar…" value="{{ cmdQuery }}" onChange="{{ onCmdQueryChange }}" style="width:100%;height:52px;padding:0 18px;border:none;background:transparent;color:var(--ink);font-size:15px;outline:none;border-bottom:1px solid var(--divider);" />
+        <div style="max-height:320px;overflow-y:auto;padding:8px;">
+          <sc-for list="{{ cmdResults }}" as="r" hint-placeholder-count="4">
+            <div onClick="{{ r.onRun }}" style="padding:10px 14px;border-radius:12px;cursor:pointer;color:var(--ink);font-size:14px;font-weight:600;">{{ r.label }}</div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    theme: 'dark', loggedIn: false, screen: 'dashboard', password: '', loginError: '',
+    cmdOpen: false, cmdQuery: '', width: null,
+    produkQuery: '', produkFilter: 'semua', selectedProdukId: 'p1',
+    pesananQuery: '', pesananFilter: 'semua', selectedPesananId: 'o1',
+    supplierQuery: '', selectedSupplierId: 's1',
+    pelangganQuery: '', selectedPelangganId: 'c1',
+    laporanRange: 'bulan',
+  };
+
+  produk = [
+    { id: 'p1', nama: 'Serum Vitamin C 20ml', hargaJual: 85000, hargaModal: 52000, stok: 3, supplier: 'CV Kosmetik Jaya' },
+    { id: 'p2', nama: 'Tas Selempang Kanvas', hargaJual: 120000, hargaModal: 78000, stok: 18, supplier: 'Bandung Leather Co' },
+    { id: 'p3', nama: 'Sepatu Slip-on Kanvas', hargaJual: 145000, hargaModal: 95000, stok: 4, supplier: 'Bandung Leather Co' },
+    { id: 'p4', nama: 'Parfum Mini 30ml', hargaJual: 65000, hargaModal: 38000, stok: 27, supplier: 'CV Kosmetik Jaya' },
+    { id: 'p5', nama: 'Kaos Polos Combed 30s', hargaJual: 55000, hargaModal: 32000, stok: 2, supplier: 'Konveksi Sumber Makmur' },
+    { id: 'p6', nama: 'Case HP Custom', hargaJual: 45000, hargaModal: 22000, stok: 12, supplier: 'Konveksi Sumber Makmur' },
+  ];
+  supplier = [
+    { id: 's1', nama: 'CV Kosmetik Jaya', wa: '6281200000001' },
+    { id: 's2', nama: 'Bandung Leather Co', wa: '6281300000002' },
+    { id: 's3', nama: 'Konveksi Sumber Makmur', wa: '6285700000003' },
+    { id: 's4', nama: 'Gudang Aksesoris Handphone', wa: '6289500000004' },
+  ];
+  pelanggan = [
+    { id: 'c1', nama: 'Siti Rahma', noHp: '0812-3456-7890' },
+    { id: 'c2', nama: 'Budi Santoso', noHp: '0813-2211-9090' },
+    { id: 'c3', nama: 'Dewi Lestari', noHp: '0857-6543-2109' },
+    { id: 'c4', nama: 'Andi Wijaya', noHp: null },
+    { id: 'c5', nama: 'Rina Amelia', noHp: '0895-1122-3344' },
+  ];
+  pesanan = [
+    { id: 'o1', namaCustomer: 'Siti Rahma', tanggal: '12 Sep 2026', status: 'lunas',
+      items: [{ nama: 'Serum Vitamin C 20ml', jumlah: 2, hargaSaat: 85000, modalSaat: 52000 }],
+      pakets: [], pembayaran: [{ tanggal: '12 Sep 2026', metode: 'Transfer', jumlah: 170000 }] },
+    { id: 'o2', namaCustomer: 'Budi Santoso', tanggal: '11 Sep 2026', status: 'nyicil',
+      items: [{ nama: 'Tas Selempang Kanvas', jumlah: 1, hargaSaat: 120000, modalSaat: 78000 }],
+      pakets: [], pembayaran: [{ tanggal: '11 Sep 2026', metode: 'Cash', jumlah: 60000 }] },
+    { id: 'o3', namaCustomer: 'Dewi Lestari', tanggal: '10 Sep 2026', status: 'lunas',
+      items: [], pakets: [{ nama: 'Paket Cantik Duo', harga: 135000, komponen: [{ nama: 'Serum Vitamin C 20ml', pcs: 1, modalSaat: 52000 }, { nama: 'Parfum Mini 30ml', pcs: 1, modalSaat: 38000 }] }],
+      pembayaran: [{ tanggal: '10 Sep 2026', metode: 'QRIS', jumlah: 135000 }] },
+    { id: 'o4', namaCustomer: 'Andi Wijaya', tanggal: '09 Sep 2026', status: 'belum_bayar',
+      items: [{ nama: 'Case HP Custom', jumlah: 1, hargaSaat: 45000, modalSaat: 22000 }, { nama: 'Charger Kabel Data (Dropship)', jumlah: 1, hargaSaat: 30000, modalSaat: 18000 }],
+      pakets: [], pembayaran: [] },
+    { id: 'o5', namaCustomer: 'Rina Amelia', tanggal: '08 Sep 2026', status: 'lunas',
+      items: [{ nama: 'Kaos Polos Combed 30s', jumlah: 3, hargaSaat: 55000, modalSaat: 32000 }],
+      pakets: [], pembayaran: [{ tanggal: '08 Sep 2026', metode: 'Cash', jumlah: 165000 }] },
+  ];
+  chartData = [
+    { bulan: 'Apr', untung: 850000 }, { bulan: 'Mei', untung: 1100000 }, { bulan: 'Jun', untung: 980000 },
+    { bulan: 'Jul', untung: 1450000 }, { bulan: 'Ags', untung: 1620000 }, { bulan: 'Sep', untung: 1290000 },
+  ];
+  topProduk = [
+    { nama: 'Serum Vitamin C 20ml', terjual: 34 }, { nama: 'Parfum Mini 30ml', terjual: 29 }, { nama: 'Case HP Custom', terjual: 21 },
+  ];
+  navDef = [
+    { key: 'dashboard', label: 'Beranda', mono: 'Be' },
+    { key: 'produk', label: 'Produk', mono: 'Pr' },
+    { key: 'pesanan', label: 'Pesanan', mono: 'Pe' },
+    { key: 'supplier', label: 'Supplier', mono: 'Su' },
+    { key: 'pelanggan', label: 'Pelanggan', mono: 'Pl' },
+    { key: 'laporan', label: 'Laporan', mono: 'La' },
+    { key: 'settings', label: 'Atur', mono: 'At' },
+  ];
+  cmdActions = [
+    { label: 'Tambah Pesanan Baru', screen: 'pesanan' },
+    { label: 'Tambah Produk Baru', screen: 'produk' },
+    { label: 'Buka Beranda', screen: 'dashboard' },
+    { label: 'Buka Laporan', screen: 'laporan' },
+    { label: 'Buka Pengaturan', screen: 'settings' },
+  ];
+
+  componentDidMount() {
+    this._onResize = () => this.setState({ width: window.innerWidth });
+    window.addEventListener('resize', this._onResize);
+    this._onResize();
+    this._onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        this.setState((s) => ({ cmdOpen: !s.cmdOpen }));
+      } else if (e.key === 'Escape') {
+        this.setState({ cmdOpen: false });
+      }
+    };
+    window.addEventListener('keydown', this._onKey);
+  }
+  componentWillUnmount() {
+    window.removeEventListener('resize', this._onResize);
+    window.removeEventListener('keydown', this._onKey);
+  }
+
+  fmt(n) { return 'Rp' + Math.round(n).toLocaleString('id-ID'); }
+
+  glass(extra) {
+    return Object.assign({
+      background: 'var(--panel)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+      border: '1px solid var(--panel-border)', borderRadius: '18px', padding: '16px', boxShadow: '0 6px 24px var(--shadow)',
+    }, extra || {});
+  }
+  pillStyle(active) {
+    return {
+      padding: '7px 14px', borderRadius: '999px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer',
+      border: '1px solid ' + (active ? 'transparent' : 'var(--divider)'),
+      background: active ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--panel)',
+      color: active ? '#fff' : 'var(--ink-dim)', whiteSpace: 'nowrap', flexShrink: 0,
+    };
+  }
+  rowStyle(selected) {
+    return {
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', padding: '10px 12px',
+      borderRadius: '14px', cursor: 'pointer', background: selected ? 'var(--panel-strong)' : 'transparent',
+      boxShadow: selected ? 'inset 0 0 0 1px var(--panel-border)' : 'none',
+    };
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dark = s.theme === 'dark';
+    const isMobile = s.width != null && s.width < 860;
+    const isDesktop = !isMobile;
+
+    const themeVars = dark
+      ? '--bg-base:#05070d; --blob1:#5b6bff; --blob2:#22d3ee; --blob3:#c084fc; --blob4:#ec4899; --panel:rgba(255,255,255,0.055); --panel-strong:rgba(255,255,255,0.09); --panel-border:rgba(255,255,255,0.14); --ink:#f2f4fa; --ink-dim:rgba(242,244,250,0.62); --ink-faint:rgba(242,244,250,0.38); --accent:#8fa4ff; --accent2:#d0a8ff; --success:#5fe3a5; --warning:#ffcf6b; --danger:#ff8f96; --divider:rgba(255,255,255,0.12); --input-bg:rgba(255,255,255,0.06); --shadow:rgba(0,0,0,0.5); --scrim:rgba(5,7,13,0.55);'
+      : '--bg-base:#eef1f8; --blob1:#a9b8ff; --blob2:#a6e6f5; --blob3:#e3c4ff; --blob4:#ffc2e0; --panel:rgba(255,255,255,0.55); --panel-strong:rgba(255,255,255,0.72); --panel-border:rgba(255,255,255,0.85); --ink:#171a24; --ink-dim:rgba(23,26,36,0.62); --ink-faint:rgba(23,26,36,0.4); --accent:#4f5fd9; --accent2:#9457d6; --success:#1f9d63; --warning:#b8720a; --danger:#c8434e; --divider:rgba(23,26,36,0.1); --input-bg:rgba(255,255,255,0.65); --shadow:rgba(30,40,80,0.16); --scrim:rgba(200,210,230,0.5);';
+
+    const nav = this.navDef.map((n) => {
+      const active = s.screen === n.key;
+      return {
+        ...n, active, onClick: () => this.setState({ screen: n.key, cmdOpen: false }),
+        style: {
+          display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderRadius: '14px', cursor: 'pointer',
+          background: active ? 'var(--panel-strong)' : 'transparent', color: active ? 'var(--ink)' : 'var(--ink-dim)',
+          boxShadow: active ? 'inset 0 0 0 1px var(--panel-border)' : 'none', fontWeight: active ? 700 : 500,
+        },
+        mobileStyle: {
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', padding: '7px 12px', borderRadius: '14px',
+          cursor: 'pointer', color: active ? 'var(--ink)' : 'var(--ink-dim)', background: active ? 'var(--panel)' : 'transparent', flexShrink: 0,
+        },
+        monoStyle: {
+          width: '30px', height: '30px', borderRadius: '9px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '11px', fontWeight: 800, letterSpacing: '0.02em', flexShrink: 0,
+          background: active ? 'linear-gradient(135deg, var(--accent), var(--accent2))' : 'var(--panel)',
+          color: active ? '#fff' : 'var(--ink-dim)',
+        },
+      };
+    });
+    const activeNav = nav.find((n) => n.active);
+
+    const produkList = this.produk.map((p) => ({
+      ...p, margin: Math.round((p.hargaJual - p.hargaModal) / p.hargaJual * 100),
+      hargaJualFmt: this.fmt(p.hargaJual), hargaModalFmt: this.fmt(p.hargaModal),
+      selected: p.id === s.selectedProdukId, onSelect: () => this.setState({ selectedProdukId: p.id }),
+      rowStyle: this.rowStyle(p.id === s.selectedProdukId),
+      stokBadgeStyle: { fontSize: '11px', fontWeight: 800, padding: '3px 9px', borderRadius: '999px', flexShrink: 0,
+        color: p.stok < 5 ? 'var(--warning)' : 'var(--success)',
+        background: p.stok < 5 ? 'color-mix(in srgb, var(--warning) 18%, transparent)' : 'color-mix(in srgb, var(--success) 16%, transparent)' },
+    }));
+    const q1 = s.produkQuery.trim().toLowerCase();
+    const filteredProduk = produkList.filter((p) => {
+      if (s.produkFilter === 'menipis' && p.stok >= 5) return false;
+      if (q1 && !p.nama.toLowerCase().includes(q1)) return false;
+      return true;
+    });
+    const selectedProduk = produkList.find((p) => p.id === s.selectedProdukId) || null;
+    const produkFilters = [{ key: 'semua', label: 'Semua' }, { key: 'menipis', label: 'Stok Menipis' }].map((f) => ({
+      ...f, active: s.produkFilter === f.key, onClick: () => this.setState({ produkFilter: f.key }),
+      pillStyle: this.pillStyle(s.produkFilter === f.key),
+    }));
+
+    const STATUS_LABEL = { belum_bayar: 'Belum Bayar', nyicil: 'Nyicil', lunas: 'Lunas' };
+    const STATUS_COLOR = { belum_bayar: 'var(--warning)', nyicil: 'var(--accent)', lunas: 'var(--success)' };
+    const pesananList = this.pesanan.map((o) => {
+      const itemsTotal = o.items.reduce((sum, it) => sum + it.hargaSaat * it.jumlah, 0);
+      const itemsModal = o.items.reduce((sum, it) => sum + it.modalSaat * it.jumlah, 0);
+      const paketsTotal = o.pakets.reduce((sum, pk) => sum + pk.harga, 0);
+      const paketsModal = o.pakets.reduce((sum, pk) => sum + pk.komponen.reduce((s2, k) => s2 + k.modalSaat * k.pcs, 0), 0);
+      const total = itemsTotal + paketsTotal;
+      const untung = total - itemsModal - paketsModal;
+      const dibayar = o.pembayaran.reduce((sum, b) => sum + b.jumlah, 0);
+      const color = STATUS_COLOR[o.status];
+      return {
+        ...o, total, untung, dibayar, totalFmt: this.fmt(total), untungFmt: this.fmt(untung),
+        statusLabel: STATUS_LABEL[o.status],
+        statusStyle: { color, background: 'color-mix(in srgb, ' + color + ' 18%, transparent)', fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '999px', flexShrink: 0 },
+        itemsFmt: o.items.map((it) => ({ ...it, subtotalFmt: this.fmt(it.hargaSaat * it.jumlah) })),
+        paketsFmt: o.pakets.map((pk) => ({ ...pk, hargaFmt: this.fmt(pk.harga), komponenLabel: pk.komponen.map((k) => k.nama + ' ×' + k.pcs).join(' + ') })),
+        pembayaranFmt: o.pembayaran.map((b) => ({ ...b, jumlahFmt: this.fmt(b.jumlah) })),
+        noPembayaran: o.pembayaran.length === 0,
+        onSelect: () => this.setState({ selectedPesananId: o.id }),
+        rowStyle: this.rowStyle(o.id === s.selectedPesananId),
+      };
+    });
+    const q2 = s.pesananQuery.trim().toLowerCase();
+    const filteredPesanan = pesananList.filter((o) => {
+      if (s.pesananFilter !== 'semua' && o.status !== s.pesananFilter) return false;
+      if (q2 && !o.namaCustomer.toLowerCase().includes(q2)) return false;
+      return true;
+    });
+    const selectedPesanan = pesananList.find((o) => o.id === s.selectedPesananId) || null;
+    const pesananFilters = ['semua', 'belum_bayar', 'nyicil', 'lunas'].map((f) => ({
+      key: f, label: f === 'semua' ? 'Semua' : STATUS_LABEL[f], active: s.pesananFilter === f,
+      onClick: () => this.setState({ pesananFilter: f }), pillStyle: this.pillStyle(s.pesananFilter === f),
+    }));
+
+    const supplierList = this.supplier.map((sp) => {
+      const products = produkList.filter((p) => p.supplier === sp.nama);
+      return {
+        ...sp, products, jumlahProdukCount: products.length, waHref: 'https://wa.me/' + sp.wa,
+        onSelect: () => this.setState({ selectedSupplierId: sp.id }), rowStyle: this.rowStyle(sp.id === s.selectedSupplierId),
+      };
+    });
+    const q3 = s.supplierQuery.trim().toLowerCase();
+    const filteredSupplier = supplierList.filter((sp) => !q3 || sp.nama.toLowerCase().includes(q3));
+    const selectedSupplier = supplierList.find((sp) => sp.id === s.selectedSupplierId) || null;
+
+    const pelangganList = this.pelanggan.map((c) => {
+      const riwayat = pesananList.filter((o) => o.namaCustomer === c.nama);
+      const totalBelanja = riwayat.reduce((sum, o) => sum + o.total, 0);
+      return {
+        ...c, riwayat, jumlahPesanan: riwayat.length, totalBelanjaFmt: this.fmt(totalBelanja),
+        noHpLabel: c.noHp || 'Tanpa nomor HP', onSelect: () => this.setState({ selectedPelangganId: c.id }),
+        rowStyle: this.rowStyle(c.id === s.selectedPelangganId),
+      };
+    });
+    const q4 = s.pelangganQuery.trim().toLowerCase();
+    const filteredPelanggan = pelangganList.filter((c) => !q4 || c.nama.toLowerCase().includes(q4));
+    const selectedPelanggan = pelangganList.find((c) => c.id === s.selectedPelangganId) || null;
+
+    const untungBulanIni = pesananList.filter((o) => o.status === 'lunas').reduce((sum, o) => sum + o.untung, 0);
+    const omzetBulanIni = pesananList.filter((o) => o.status === 'lunas').reduce((sum, o) => sum + o.total, 0);
+    const nilaiStok = produkList.reduce((sum, p) => sum + p.stok * p.hargaModal, 0);
+    const pendingCount = pesananList.filter((o) => o.status !== 'lunas').length;
+    const stokMenipis = produkList.filter((p) => p.stok < 5).sort((a, b) => a.stok - b.stok);
+
+    const maxUntung = Math.max(...this.chartData.map((c) => c.untung));
+    const chart = this.chartData.map((c) => ({
+      ...c, untungFmt: this.fmt(c.untung),
+      barStyle: { width: '100%', maxWidth: '34px', height: Math.round(c.untung / maxUntung * 100) + '%', borderRadius: '8px 8px 3px 3px',
+        background: 'linear-gradient(180deg, var(--accent), var(--accent2))' },
+    }));
+    const totalUntungRange = this.chartData.reduce((sum, c) => sum + c.untung, 0);
+    const topProdukRanked = this.topProduk.map((t, i) => ({ ...t, rank: i + 1 }));
+    const laporanRanges = [{ key: 'bulan', label: 'Bulan ini' }, { key: '3bulan', label: '3 Bulan' }, { key: 'tahun', label: 'Tahun ini' }].map((r) => ({
+      ...r, active: s.laporanRange === r.key, onClick: () => this.setState({ laporanRange: r.key }), pillStyle: this.pillStyle(s.laporanRange === r.key),
+    }));
+
+    const cq = s.cmdQuery.trim().toLowerCase();
+    const cmdResults = this.cmdActions.filter((a) => !cq || a.label.toLowerCase().includes(cq)).map((a) => ({
+      ...a, onRun: () => this.setState({ screen: a.screen, cmdOpen: false, cmdQuery: '' }),
+    }));
+
+    const inputStyle = { width: '100%', height: '42px', padding: '0 14px', borderRadius: '12px', border: '1px solid var(--divider)', background: 'var(--input-bg)', color: 'var(--ink)', fontSize: '13.5px', outline: 'none' };
+
+    return {
+      themeVars, dark, isMobile, isDesktop,
+      shellStyle: { position: 'relative', zIndex: 1, display: 'flex', flexDirection: isMobile ? 'column' : 'row', minHeight: '100dvh' },
+      mainColStyle: { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column',
+        padding: isMobile ? '16px 16px 100px' : '20px 24px 20px 0' },
+      headerStyle: { display: 'flex', alignItems: 'center', gap: isMobile ? '10px' : '16px', background: 'var(--panel)',
+        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid var(--panel-border)',
+        borderRadius: '20px', padding: isMobile ? '12px 14px' : '14px 20px', marginBottom: '20px', boxShadow: '0 8px 30px var(--shadow)' },
+      mainBottomPad: isMobile ? '0' : '0',
+      statGridStyle: { display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2,minmax(0,1fr))' : 'repeat(3,minmax(0,1fr))', gap: '14px' },
+      quickGridStyle: { display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: '14px' },
+      splitRowStyle: { display: 'flex', gap: '16px', flexDirection: isMobile ? 'column' : 'row', alignItems: 'flex-start' },
+      listPaneStyle: this.glass({ width: isMobile ? '100%' : '340px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '12px',
+        maxHeight: isMobile ? 'none' : 'calc(100dvh - 200px)', overflow: 'hidden' }),
+      detailPaneStyle: this.glass({ flex: 1, minWidth: 0, padding: '22px' }),
+      inputStyle,
+
+      loggedIn: s.loggedIn, isLoginScreen: !s.loggedIn,
+      password: s.password, onPasswordChange: (e) => this.setState({ password: e.target.value }),
+      loginError: s.loginError,
+      handleLogin: (e) => { e.preventDefault(); if (!s.password.trim()) { this.setState({ loginError: 'Masukkan password.' }); return; } this.setState({ loggedIn: true, loginError: '' }); },
+      handleLogout: () => this.setState({ loggedIn: false, password: '', screen: 'dashboard' }),
+      toggleTheme: () => this.setState({ theme: dark ? 'light' : 'dark' }),
+      themeToggleLabel: dark ? 'Mode Terang' : 'Mode Gelap',
+      setLight: () => this.setState({ theme: 'light' }), setDark: () => this.setState({ theme: 'dark' }),
+      lightPillStyle: this.pillStyle(!dark), darkPillStyle: this.pillStyle(dark),
+
+      nav, activeNavLabel: activeNav ? activeNav.label : '',
+      isDashboard: s.screen === 'dashboard', isProduk: s.screen === 'produk', isPesanan: s.screen === 'pesanan',
+      isSupplier: s.screen === 'supplier', isPelanggan: s.screen === 'pelanggan', isLaporan: s.screen === 'laporan', isSettings: s.screen === 'settings',
+
+      cmdOpen: s.cmdOpen, cmdQuery: s.cmdQuery, cmdResults,
+      openCmd: () => this.setState({ cmdOpen: true }), closeCmd: () => this.setState({ cmdOpen: false }),
+      onCmdQueryChange: (e) => this.setState({ cmdQuery: e.target.value }),
+      stopPropagation: (e) => e.stopPropagation(),
+
+      produkQuery: s.produkQuery, onProdukQueryChange: (e) => this.setState({ produkQuery: e.target.value }),
+      produkFilters, filteredProduk, selectedProduk, hasSelectedProduk: !!selectedProduk, noSelectedProduk: !selectedProduk,
+      showListProduk: !isMobile || !selectedProduk, showDetailProduk: !isMobile || !!selectedProduk,
+      clearProduk: () => this.setState({ selectedProdukId: null }),
+
+      pesananQuery: s.pesananQuery, onPesananQueryChange: (e) => this.setState({ pesananQuery: e.target.value }),
+      pesananFilters, filteredPesanan, selectedPesanan, hasSelectedPesanan: !!selectedPesanan, noSelectedPesanan: !selectedPesanan,
+      showListPesanan: !isMobile || !selectedPesanan, showDetailPesanan: !isMobile || !!selectedPesanan,
+      clearPesanan: () => this.setState({ selectedPesananId: null }),
+
+      supplierQuery: s.supplierQuery, onSupplierQueryChange: (e) => this.setState({ supplierQuery: e.target.value }),
+      filteredSupplier, selectedSupplier, hasSelectedSupplier: !!selectedSupplier, noSelectedSupplier: !selectedSupplier,
+      showListSupplier: !isMobile || !selectedSupplier, showDetailSupplier: !isMobile || !!selectedSupplier,
+      clearSupplier: () => this.setState({ selectedSupplierId: null }),
+
+      pelangganQuery: s.pelangganQuery, onPelangganQueryChange: (e) => this.setState({ pelangganQuery: e.target.value }),
+      filteredPelanggan, selectedPelanggan, hasSelectedPelanggan: !!selectedPelanggan, noSelectedPelanggan: !selectedPelanggan,
+      showListPelanggan: !isMobile || !selectedPelanggan, showDetailPelanggan: !isMobile || !!selectedPelanggan,
+      clearPelanggan: () => this.setState({ selectedPelangganId: null }),
+
+      untungBulanIniFmt: this.fmt(untungBulanIni), omzetBulanIniFmt: this.fmt(omzetBulanIni), nilaiStokFmt: this.fmt(nilaiStok),
+      pendingCount, stokMenipis, hasStokMenipis: stokMenipis.length > 0, noStokMenipis: stokMenipis.length === 0,
+      goToPesananNew: () => this.setState({ screen: 'pesanan' }), goToProdukNew: () => this.setState({ screen: 'produk' }),
+
+      laporanRanges, chart, totalUntungRangeFmt: this.fmt(totalUntungRange), topProdukRanked,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -36,8 +36,8 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-4">
       <div className="glass-hero rounded-[22px] p-5">
-        <p className="text-[13px] font-semibold text-glass-ink-dim">Untung bulan ini</p>
-        <p className="mt-2 text-[38px] font-extrabold leading-none text-glass-ink">
+        <p className="text-display text-[13px] font-semibold text-glass-ink-dim">Untung bulan ini</p>
+        <p className="text-data mt-2 text-[38px] font-extrabold leading-none text-glass-ink">
           {formatRupiah(untung)}
         </p>
         <p className="mt-2 text-xs text-glass-ink-dim">Dari pesanan lunas</p>
@@ -45,48 +45,48 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <div className="glass-panel rounded-[20px] p-4">
-          <p className="text-xs font-medium text-glass-ink-dim">Omzet bulan ini</p>
-          <p className="mt-1 text-[20px] font-extrabold text-glass-ink">
+          <p className="text-display text-xs font-medium text-glass-ink-dim">Omzet bulan ini</p>
+          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
             {formatRupiah(omzet)}
           </p>
         </div>
         <div className="glass-panel rounded-[20px] p-4">
-          <p className="text-xs font-medium text-glass-ink-dim">Nilai Stok (HPP)</p>
-          <p className="mt-1 text-[20px] font-extrabold text-glass-ink">
+          <p className="text-display text-xs font-medium text-glass-ink-dim">Nilai Stok (HPP)</p>
+          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
             {formatRupiah(nilaiStok)}
           </p>
         </div>
         <div className="glass-panel col-span-2 rounded-[20px] p-4 sm:col-span-1">
-          <p className="text-xs font-medium text-glass-ink-dim">Pesanan pending</p>
-          <p className="mt-1 text-[20px] font-extrabold text-glass-ink">{pendingCount}</p>
+          <p className="text-display text-xs font-medium text-glass-ink-dim">Pesanan pending</p>
+          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">{pendingCount}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <Link
           href="/pesanan?new=1"
-          className="glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
+          className="brutal-interactive glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
         >
           <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-glass-accent/15 text-glass-accent">
             <PlusIcon />
           </span>
-          <span className="font-bold text-glass-ink">Tambah Pesanan</span>
+          <span className="text-display font-bold text-glass-ink">Tambah Pesanan</span>
         </Link>
         <Link
           href="/produk?new=1"
-          className="glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
+          className="brutal-interactive glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
         >
           <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-glass-success/15 text-glass-success">
             <PlusIcon />
           </span>
-          <span className="font-bold text-glass-ink">Tambah Produk</span>
+          <span className="text-display font-bold text-glass-ink">Tambah Produk</span>
         </Link>
       </div>
 
       <section>
         <div className="mb-2 flex items-center justify-between">
-          <h2 className="font-bold text-glass-ink">Stok menipis</h2>
-          <Link href="/produk" className="text-sm font-semibold text-glass-accent">
+          <h2 className="text-display font-bold text-glass-ink">Stok menipis</h2>
+          <Link href="/produk" className="text-display text-sm font-semibold text-glass-accent">
             Lihat semua
           </Link>
         </div>
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
                 className="glass-panel flex items-center justify-between rounded-[20px] border-l-[3px] border-l-glass-warning py-3 pl-3.5 pr-4"
               >
                 <span className="font-medium text-glass-ink">{p.nama}</span>
-                <span className="rounded-full bg-glass-warning/15 px-2.5 py-1 text-sm font-bold text-glass-warning">
+                <span className="badge-warning text-data rounded-full bg-glass-warning/15 px-2.5 py-1 text-sm font-bold text-glass-warning">
                   Sisa {p.stok}
                 </span>
               </div>

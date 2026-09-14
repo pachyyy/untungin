@@ -12,7 +12,7 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-[52px] w-[52px] items-center justify-center rounded-[16px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-2xl font-black text-white">
             U
           </div>
-          <h1 className="text-[26px] font-extrabold tracking-tight text-glass-ink">
+          <h1 className="text-display text-[26px] font-extrabold tracking-tight text-glass-ink">
             Untungin
           </h1>
           <p className="mt-1.5 text-sm text-glass-ink-dim">

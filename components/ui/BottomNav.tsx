@@ -30,7 +30,7 @@ export function BottomNav() {
               </span>
               <span
                 className={cn(
-                  "text-[10px] font-medium",
+                  "text-display text-[10px] font-medium",
                   active ? "font-bold text-glass-ink" : "text-glass-ink-faint"
                 )}
               >

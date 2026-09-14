@@ -15,7 +15,7 @@ export function Sidebar() {
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-base font-black text-white">
             U
           </div>
-          <span className="text-[15px] font-extrabold tracking-tight text-glass-ink">
+          <span className="text-display text-[15px] font-extrabold tracking-tight text-glass-ink">
             Untungin
           </span>
         </div>
@@ -28,7 +28,7 @@ export function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-[14px] transition-colors",
+                  "brutal-interactive text-display flex items-center gap-2.5 rounded-[14px] px-2.5 py-2 text-[14px] transition-colors",
                   active
                     ? "border border-panel-border bg-panel-strong font-bold text-glass-ink"
                     : "border border-transparent text-glass-ink-dim hover:bg-panel"

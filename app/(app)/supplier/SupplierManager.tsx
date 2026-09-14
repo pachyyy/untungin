@@ -108,7 +108,7 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
                   key={s.id}
                   onClick={() => selectRow(s.id)}
                   className={cn(
-                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    "brutal-interactive flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
                     active
                       ? "border-panel-border bg-panel-strong"
                       : "border-transparent hover:bg-panel"
@@ -117,7 +117,7 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
                   <span className="min-w-0 truncate text-[14px] font-bold text-glass-ink">
                     {s.nama}
                   </span>
-                  <span className="shrink-0 text-xs text-glass-ink-dim">
+                  <span className="text-data shrink-0 text-xs text-glass-ink-dim">
                     {s.jumlahProduk} produk
                   </span>
                 </button>
@@ -144,13 +144,13 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
             </button>
 
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <h2 className="text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
+              <h2 className="text-display text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
               {selected.kontak && (
                 <a
                   href={`https://wa.me/${selected.kontak.replace(/[^0-9]/g, "")}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-full bg-glass-success/15 px-3.5 py-1.5 text-sm font-semibold text-glass-success"
+                  className="badge-success brutal-interactive text-display flex items-center gap-1.5 rounded-full bg-glass-success/15 px-3.5 py-1.5 text-sm font-semibold text-glass-success"
                 >
                   <MessageCircle className="h-4 w-4" />
                   Hubungi WA
@@ -159,7 +159,7 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
             </div>
 
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+              <p className="text-display mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
                 Produk dari supplier ini ({selected.produk.length})
               </p>
               {selected.produk.length === 0 ? (
@@ -176,7 +176,7 @@ export function SupplierManager({ suppliers }: { suppliers: SupplierRow[] }) {
                       <span className="min-w-0 flex-1 truncate font-medium text-glass-ink">
                         {p.nama}
                       </span>
-                      <span className="shrink-0 text-glass-ink-dim">
+                      <span className="text-data shrink-0 text-glass-ink-dim">
                         {p.stok} stok · {formatRupiah(p.hargaModal)}
                       </span>
                     </div>

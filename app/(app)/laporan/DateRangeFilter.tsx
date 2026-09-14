@@ -52,7 +52,7 @@ export function DateRangeFilter({ from, to }: { from: string; to: string }) {
             key={p.key}
             onClick={() => apply(p.key)}
             className={cn(
-              "rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
+              "text-display rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
               active
                 ? "bg-panel-strong text-glass-ink"
                 : "text-glass-ink-faint hover:bg-panel"

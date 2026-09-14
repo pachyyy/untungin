@@ -95,7 +95,7 @@ export function CommandPaletteProvider({ children }: { children: React.ReactNode
                       key={action.href}
                       value={action.label}
                       onSelect={() => select(action.href)}
-                      className="rounded-xl px-3 py-2.5 text-[14px] font-semibold text-glass-ink data-[selected=true]:bg-panel-strong"
+                      className="text-display rounded-xl px-3 py-2.5 text-[14px] font-semibold text-glass-ink data-[selected=true]:bg-panel-strong"
                     >
                       {action.label}
                     </CommandItem>
