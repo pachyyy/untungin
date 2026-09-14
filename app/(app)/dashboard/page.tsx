@@ -12,12 +12,19 @@ export default async function DashboardPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [pesananBulanIni, pendingCount, stokMenipis, semuaProduk] = await Promise.all([
+  const [pesananBulanIni, pendingPesanan, stokMenipis, semuaProduk] = await Promise.all([
     prisma.pesanan.findMany({
       where: { createdAt: { gte: monthStart, lt: monthEnd } },
       include: { items: true, pakets: { include: { komponen: true } } },
     }),
-    prisma.pesanan.count({ where: { status: { in: ["belum_bayar", "nyicil"] } } }),
+    prisma.pesanan.findMany({
+      where: { status: { in: ["belum_bayar", "nyicil"] } },
+      include: {
+        items: true,
+        pakets: { include: { komponen: true } },
+        pembayaran: true,
+      },
+    }),
     prisma.produk.findMany({
       where: { stok: { lt: STOK_MENIPIS } },
       orderBy: { stok: "asc" },
@@ -32,6 +39,13 @@ export default async function DashboardPage() {
   const untung = realized.reduce((s, p) => s + untungPesanan(p), 0);
   // Cost value of everything currently on the shelf — not month-scoped.
   const nilaiStok = semuaProduk.reduce((s, p) => s + p.stok * p.hargaModal, 0);
+  const pendingCount = pendingPesanan.length;
+  // Outstanding balance still owed across belum_bayar/nyicil orders — for
+  // nyicil, only the unpaid remainder counts, not the whole order value.
+  const pendingOmzet = pendingPesanan.reduce((s, p) => {
+    const dibayar = p.pembayaran.reduce((s2, b) => s2 + b.jumlah, 0);
+    return s + (totalPesanan(p) - dibayar);
+  }, 0);
 
   return (
     <div className="space-y-4">
@@ -43,7 +57,7 @@ export default async function DashboardPage() {
         <p className="mt-2 text-xs text-glass-ink-dim">Dari pesanan lunas</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3">
         <div className="glass-panel rounded-[20px] p-4">
           <p className="text-display text-xs font-medium text-glass-ink-dim">Omzet bulan ini</p>
           <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
@@ -56,9 +70,15 @@ export default async function DashboardPage() {
             {formatRupiah(nilaiStok)}
           </p>
         </div>
-        <div className="glass-panel col-span-2 rounded-[20px] p-4 sm:col-span-1">
+        <div className="glass-panel rounded-[20px] p-4">
           <p className="text-display text-xs font-medium text-glass-ink-dim">Pesanan pending</p>
           <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">{pendingCount}</p>
+        </div>
+        <div className="glass-panel rounded-[20px] p-4">
+          <p className="text-display text-xs font-medium text-glass-ink-dim">Belum dibayar</p>
+          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
+            {formatRupiah(pendingOmzet)}
+          </p>
         </div>
       </div>
 
