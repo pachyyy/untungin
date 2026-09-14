@@ -18,7 +18,7 @@ import {
 
 type PesananItemRow = {
   id: string;
-  produkId: string;
+  produkId: string | null;
   nama: string;
   jumlah: number;
   hargaSaat: number;

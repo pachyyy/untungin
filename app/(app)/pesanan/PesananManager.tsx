@@ -40,7 +40,7 @@ import {
 
 type ItemRow = {
   id: string;
-  produkId: string;
+  produkId: string | null;
   nama: string;
   jumlah: number;
   hargaSaat: number;
@@ -277,6 +277,11 @@ function PesananCard({
         {p.items.map((it) => (
           <li key={it.id} className="flex justify-between gap-2">
             <span className="min-w-0 truncate text-ink">
+              {!it.produkId && (
+                <span className="mr-1 rounded bg-warning/10 px-1 text-[10px] font-bold uppercase text-warning">
+                  Dropship
+                </span>
+              )}
               {it.nama} <span className="text-muted">×{it.jumlah}</span>
             </span>
             <span className="shrink-0 text-muted">
@@ -333,7 +338,15 @@ function PesananCard({
   );
 }
 
-type DraftItem = { produkId: string; jumlah: number; harga: string };
+// produkId null = dropship item: namaManual + modal are typed by hand instead
+// of picked from stock.
+type DraftItem = {
+  produkId: string | null;
+  namaManual: string;
+  modal: string;
+  jumlah: number;
+  harga: string;
+};
 type DraftKomp = { produkId: string; pcs: number };
 type DraftPaket = { nama: string; harga: string; komponen: DraftKomp[] };
 
@@ -360,6 +373,8 @@ function PesananFormModal({
     editing
       ? editing.items.map((it) => ({
           produkId: it.produkId,
+          namaManual: it.produkId ? "" : it.nama,
+          modal: it.produkId ? "" : String(it.modalSaat),
           jumlah: it.jumlah,
           harga: String(it.hargaSaat),
         }))
@@ -391,6 +406,10 @@ function PesananFormModal({
     const n = Math.floor(Number(it.harga));
     return Number.isFinite(n) && n > 0 ? n : 0;
   }
+  function itemModal(it: DraftItem): number {
+    const n = Math.floor(Number(it.modal));
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  }
   function paketHarga(pk: DraftPaket): number {
     const n = Math.floor(Number(pk.harga));
     return Number.isFinite(n) && n > 0 ? n : 0;
@@ -402,10 +421,11 @@ function PesananFormModal({
 
   // --- single items ---
   function addItem() {
-    if (produk.length === 0) return;
     setItems((prev) => [
       ...prev,
-      { produkId: produk[0].id, jumlah: 1, harga: "" },
+      produk.length > 0
+        ? { produkId: produk[0].id, namaManual: "", modal: "", jumlah: 1, harga: "" }
+        : { produkId: null, namaManual: "", modal: "", jumlah: 1, harga: "" },
     ]);
   }
   function updateItem(idx: number, patch: Partial<DraftItem>) {
@@ -470,15 +490,33 @@ function PesananFormModal({
     setError(undefined);
 
     const cleanItems = items
-      .map((it) => ({
-        produkId: it.produkId,
-        jumlah: it.jumlah,
-        hargaSaat: itemHarga(it),
-      }))
-      .filter((it) => it.produkId && it.jumlah > 0 && it.hargaSaat > 0);
+      .map((it) =>
+        it.produkId
+          ? {
+              produkId: it.produkId,
+              namaManual: null as string | null,
+              jumlah: it.jumlah,
+              hargaSaat: itemHarga(it),
+              modalManual: 0,
+            }
+          : {
+              produkId: null,
+              namaManual: it.namaManual.trim(),
+              jumlah: it.jumlah,
+              hargaSaat: itemHarga(it),
+              modalManual: itemModal(it),
+            }
+      )
+      .filter((it) =>
+        it.produkId
+          ? it.jumlah > 0 && it.hargaSaat > 0
+          : it.namaManual && it.jumlah > 0 && it.hargaSaat > 0
+      );
 
     if (cleanItems.length !== items.length) {
-      setError("Setiap item satuan harus punya harga jual lebih dari 0.");
+      setError(
+        "Setiap item harus lengkap: pilih produk dari stok, atau isi nama & HPP untuk item dropship, dengan jumlah dan harga jual lebih dari 0."
+      );
       return;
     }
 
@@ -522,12 +560,7 @@ function PesananFormModal({
       onClose={onClose}
       title={editing ? "Edit Pesanan" : "Pesanan Baru"}
     >
-      {produk.length === 0 ? (
-        <p className="text-sm text-muted">
-          Belum ada produk. Tambahkan produk dulu sebelum membuat pesanan.
-        </p>
-      ) : (
-        <form action={handleSubmit} className="space-y-3">
+      <form action={handleSubmit} className="space-y-3">
           <div>
             <Label htmlFor="namaCustomer">Nama customer</Label>
             <input type="hidden" name="namaCustomer" value={namaCustomer} />
@@ -572,22 +605,68 @@ function PesananFormModal({
 
             <div className="space-y-2">
               {items.map((it, idx) => {
-                const pr = produkMap.get(it.produkId);
+                const isDropship = it.produkId === null;
+                const pr = it.produkId ? produkMap.get(it.produkId) : undefined;
                 return (
                   <div
                     key={idx}
                     className="rounded-xl border border-border p-2"
                   >
+                    {produk.length > 0 && (
+                      <div className="mb-2 flex gap-1 rounded-lg bg-secondary p-0.5 text-xs font-semibold">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            updateItem(idx, {
+                              produkId: produk[0].id,
+                              namaManual: "",
+                              modal: "",
+                            })
+                          }
+                          className={
+                            "flex-1 rounded-md py-1 transition-colors " +
+                            (!isDropship
+                              ? "bg-card text-ink shadow-sm"
+                              : "text-muted-foreground")
+                          }
+                        >
+                          Dari stok
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateItem(idx, { produkId: null })}
+                          className={
+                            "flex-1 rounded-md py-1 transition-colors " +
+                            (isDropship
+                              ? "bg-card text-ink shadow-sm"
+                              : "text-muted-foreground")
+                          }
+                        >
+                          Dropship
+                        </button>
+                      </div>
+                    )}
                     <div className="flex gap-2">
-                      <Combobox
-                        className="h-10 flex-1 text-sm"
-                        options={produkOptions}
-                        value={it.produkId}
-                        onChange={(v) => updateItem(idx, { produkId: v })}
-                        placeholder="Pilih produk"
-                        searchPlaceholder="Cari produk…"
-                        emptyText="Produk tidak ditemukan."
-                      />
+                      {isDropship ? (
+                        <Input
+                          className="h-10 flex-1 text-sm"
+                          placeholder="Nama item dropship"
+                          value={it.namaManual}
+                          onChange={(e) =>
+                            updateItem(idx, { namaManual: e.target.value })
+                          }
+                        />
+                      ) : (
+                        <Combobox
+                          className="h-10 flex-1 text-sm"
+                          options={produkOptions}
+                          value={it.produkId ?? ""}
+                          onChange={(v) => updateItem(idx, { produkId: v })}
+                          placeholder="Pilih produk"
+                          searchPlaceholder="Cari produk…"
+                          emptyText="Produk tidak ditemukan."
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={() => removeItem(idx)}
@@ -633,9 +712,29 @@ function PesananFormModal({
                         />
                       </div>
                     </div>
+                    {isDropship && (
+                      <div className="mt-2">
+                        <span className="mb-0.5 block text-[11px] text-muted">
+                          HPP / pcs (modal dropship)
+                        </span>
+                        <Input
+                          className="h-10"
+                          inputMode="numeric"
+                          placeholder="cth: 50000"
+                          value={it.modal}
+                          onChange={(e) =>
+                            updateItem(idx, {
+                              modal: e.target.value.replace(/[^0-9]/g, ""),
+                            })
+                          }
+                        />
+                      </div>
+                    )}
                     <div className="mt-1 flex justify-between px-1 text-xs text-muted">
                       <span>
-                        {pr && pr.stok < it.jumlah
+                        {isDropship
+                          ? "Dropship · tanpa stok"
+                          : pr && pr.stok < it.jumlah
                           ? `⚠ stok tersisa ${pr.stok}`
                           : `Stok ${pr?.stok ?? 0}`}
                       </span>
@@ -647,7 +746,8 @@ function PesananFormModal({
             </div>
           </div>
 
-          {/* Paket / bundle section */}
+          {/* Paket / bundle section — needs at least one produk to compose from */}
+          {produk.length > 0 && (
           <div>
             <div className="mb-1 flex items-center justify-between">
               <Label>Paket (gabungan produk)</Label>
@@ -764,6 +864,7 @@ function PesananFormModal({
               })}
             </div>
           </div>
+          )}
 
           <div className="flex items-center justify-between rounded-xl bg-primary/5 px-3 py-2">
             <span className="font-semibold text-ink">Total</span>
@@ -792,7 +893,6 @@ function PesananFormModal({
             </Button>
           </div>
         </form>
-      )}
     </Modal>
   );
 }

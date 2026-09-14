@@ -21,6 +21,7 @@ async function main() {
   });
   console.log(`PesananItem: ${items.length} rows to backfill.`);
   for (const it of items) {
+    if (!it.produk) continue; // dropship item typed by hand, nothing to backfill from
     await prisma.pesananItem.update({
       where: { id: it.id },
       data: { modalSaat: it.produk.hargaModal },

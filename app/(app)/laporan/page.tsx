@@ -66,7 +66,7 @@ export default async function LaporanPage({
 
     for (const it of p.items) {
       addSale(it.hargaSaat * it.jumlah, it.modalSaat * it.jumlah);
-      addQty(it.produk.nama, it.jumlah);
+      addQty(it.produk?.nama ?? it.namaManual ?? "", it.jumlah);
     }
     for (const pk of p.pakets) {
       const modal = pk.komponen.reduce((s, k) => s + k.modalSaat * k.pcs, 0);

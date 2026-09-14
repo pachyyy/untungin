@@ -70,14 +70,15 @@ model Customer {
 }
 
 model PesananItem {
-  id        String  @id @default(cuid())
-  pesananId String
-  pesanan   Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
-  produkId  String
-  produk    Produk  @relation(fields: [produkId], references: [id])
-  jumlah    Int
-  hargaSaat Int // snapshot harga jual saat transaksi
-  modalSaat Int @default(0) // snapshot produk.hargaModal saat transaksi
+  id         String  @id @default(cuid())
+  pesananId  String
+  pesanan    Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  produkId   String? // null for a dropshipped item typed directly on the order (no stock, see namaManual)
+  produk     Produk? @relation(fields: [produkId], references: [id])
+  namaManual String? // item name typed by hand; only set when produkId is null
+  jumlah     Int
+  hargaSaat  Int // snapshot harga jual saat transaksi
+  modalSaat  Int @default(0) // snapshot produk.hargaModal saat transaksi, or the typed HPP for a dropship item
 }
 
 // A bundle line within an order: several products combined, sold at one price.

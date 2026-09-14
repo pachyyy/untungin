@@ -44,7 +44,7 @@ export default async function PelangganPage() {
             items: p.items.map((it) => ({
               id: it.id,
               produkId: it.produkId,
-              nama: it.produk.nama,
+              nama: it.produk?.nama ?? it.namaManual ?? "",
               jumlah: it.jumlah,
               hargaSaat: it.hargaSaat,
               modalSaat: it.modalSaat,

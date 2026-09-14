@@ -5,7 +5,16 @@ import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { resolveCustomerId } from "@/lib/actions/customer";
 
-type ItemInput = { produkId: string; jumlah: number; hargaSaat: number };
+// produkId set = stock item (decrements Produk.stok). produkId null = dropship
+// item typed directly on the order: namaManual + modalManual carry what a
+// Produk record would otherwise supply, and no stock is touched.
+type ItemInput = {
+  produkId: string | null;
+  namaManual: string | null;
+  jumlah: number;
+  hargaSaat: number;
+  modalManual: number;
+};
 type PaketKomponenInput = { produkId: string; pcs: number };
 type PaketInput = { nama: string; harga: number; komponen: PaketKomponenInput[] };
 
@@ -14,19 +23,26 @@ function parseItems(raw: FormDataEntryValue | null): ItemInput[] {
     const arr = JSON.parse(String(raw ?? "[]"));
     if (!Array.isArray(arr)) return [];
     return arr
-      .map((it) => ({
-        produkId: String(it.produkId ?? ""),
-        jumlah: Math.floor(Number(it.jumlah)),
-        hargaSaat: Math.floor(Number(it.hargaSaat)),
-      }))
-      .filter(
-        (it) =>
-          it.produkId &&
-          Number.isFinite(it.jumlah) &&
-          it.jumlah > 0 &&
-          Number.isFinite(it.hargaSaat) &&
-          it.hargaSaat > 0
-      );
+      .map((it) => {
+        const produkId = String(it.produkId ?? "").trim() || null;
+        return {
+          produkId,
+          namaManual: produkId ? null : String(it.namaManual ?? "").trim() || null,
+          jumlah: Math.floor(Number(it.jumlah)),
+          hargaSaat: Math.floor(Number(it.hargaSaat)),
+          modalManual: Math.floor(Number(it.modalManual)),
+        };
+      })
+      .filter((it) => {
+        if (!Number.isFinite(it.jumlah) || it.jumlah <= 0) return false;
+        if (!Number.isFinite(it.hargaSaat) || it.hargaSaat <= 0) return false;
+        if (it.produkId) return true;
+        return (
+          !!it.namaManual &&
+          Number.isFinite(it.modalManual) &&
+          it.modalManual >= 0
+        );
+      });
   } catch {
     return [];
   }
@@ -64,15 +80,16 @@ function parsePakets(raw: FormDataEntryValue | null): PaketInput[] {
   }
 }
 
-/** Total pcs needed per product, across single items and paket components. */
+/** Total pcs needed per product, across single items and paket components.
+ * Dropship items (produkId null) hold no stock and are skipped. */
 function stockNeeds(pesanan: {
-  items: { produkId: string; jumlah: number }[];
+  items: { produkId: string | null; jumlah: number }[];
   pakets: { komponen: { produkId: string; pcs: number }[] }[];
 }): Map<string, number> {
   const need = new Map<string, number>();
   const add = (id: string, qty: number) =>
     need.set(id, (need.get(id) ?? 0) + qty);
-  for (const it of pesanan.items) add(it.produkId, it.jumlah);
+  for (const it of pesanan.items) if (it.produkId) add(it.produkId, it.jumlah);
   for (const pk of pesanan.pakets)
     for (const k of pk.komponen) add(k.produkId, k.pcs);
   return need;
@@ -100,7 +117,7 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
     };
 
   const referenced = new Set<string>();
-  items.forEach((it) => referenced.add(it.produkId));
+  items.forEach((it) => it.produkId && referenced.add(it.produkId));
   pakets.forEach((pk) => pk.komponen.forEach((k) => referenced.add(k.produkId)));
 
   const produkList = await prisma.produk.findMany({
@@ -138,9 +155,14 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
         items: {
           create: items.map((it) => ({
             produkId: it.produkId,
+            namaManual: it.namaManual,
             jumlah: it.jumlah,
             hargaSaat: it.hargaSaat, // selling price entered per order
-            modalSaat: produkById.get(it.produkId)!.hargaModal, // cost snapshot
+            // cost snapshot: from the product for a stock item, or the typed
+            // HPP for a dropship item.
+            modalSaat: it.produkId
+              ? produkById.get(it.produkId)!.hargaModal
+              : it.modalManual,
           })),
         },
         pakets: {
@@ -189,7 +211,7 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
     };
 
   const referenced = new Set<string>();
-  items.forEach((it) => referenced.add(it.produkId));
+  items.forEach((it) => it.produkId && referenced.add(it.produkId));
   pakets.forEach((pk) => pk.komponen.forEach((k) => referenced.add(k.produkId)));
 
   const produkList = await prisma.produk.findMany({
@@ -252,9 +274,12 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
         items: {
           create: items.map((it) => ({
             produkId: it.produkId,
+            namaManual: it.namaManual,
             jumlah: it.jumlah,
             hargaSaat: it.hargaSaat,
-            modalSaat: produkById.get(it.produkId)!.hargaModal,
+            modalSaat: it.produkId
+              ? produkById.get(it.produkId)!.hargaModal
+              : it.modalManual,
           })),
         },
         pakets: {
