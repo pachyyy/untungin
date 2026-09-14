@@ -23,6 +23,7 @@ function compact(n: number): string {
 export function LaporanChart({ data }: { data: Point[] }) {
   const { mode } = useDesignMode();
   const brutalist = mode === "brutalist";
+  const minimal = mode === "minimal";
 
   return (
     <div className="h-64 w-full">
@@ -64,14 +65,23 @@ export function LaporanChart({ data }: { data: Point[] }) {
                     color: "var(--glass-ink)",
                     fontSize: 13,
                   }
-                : {
-                    borderRadius: 14,
-                    border: "1px solid var(--panel-border)",
-                    background: "var(--panel-strong)",
-                    backdropFilter: "blur(20px)",
-                    color: "var(--glass-ink)",
-                    fontSize: 13,
-                  }
+                : minimal
+                  ? {
+                      borderRadius: 10,
+                      border: "1px solid var(--panel-border)",
+                      background: "var(--panel)",
+                      boxShadow: "0 4px 12px var(--glass-shadow)",
+                      color: "var(--glass-ink)",
+                      fontSize: 13,
+                    }
+                  : {
+                      borderRadius: 14,
+                      border: "1px solid var(--panel-border)",
+                      background: "var(--panel-strong)",
+                      backdropFilter: "blur(20px)",
+                      color: "var(--glass-ink)",
+                      fontSize: 13,
+                    }
             }
             labelStyle={{ color: "var(--glass-ink)" }}
           />
@@ -80,7 +90,7 @@ export function LaporanChart({ data }: { data: Point[] }) {
             fill="url(#untungGradient)"
             stroke={brutalist ? "var(--panel-border)" : undefined}
             strokeWidth={brutalist ? 2 : 0}
-            radius={brutalist ? [0, 0, 0, 0] : [6, 6, 0, 0]}
+            radius={brutalist ? [0, 0, 0, 0] : minimal ? [4, 4, 0, 0] : [6, 6, 0, 0]}
             maxBarSize={44}
           />
         </BarChart>

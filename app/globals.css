@@ -207,6 +207,61 @@
     --blob-3: #ffe600;
     --blob-4: #050505;
   }
+
+  /* Minimal design mode — same token *names* as glass/brutalist (free re-skin
+     for every existing component), re-pointed at a flat grayscale palette plus
+     one accent (emerald — reads as "untung"/profit). --glass-accent2 equals
+     --glass-accent for the same flat-gradient trick brutalist uses.
+     --glass-success intentionally equals --glass-accent: one green tells one
+     story (positive) instead of splitting brand accent from status color. No
+     --accent-ink override is needed here — plain white text already has
+     enough contrast against both accent values, unlike brutalist's bright
+     yellow. */
+  [data-design-mode="minimal"] {
+    --bg-base: #0a0a0b;
+    --panel: #131316;
+    --panel-strong: #1c1c1f;
+    --panel-border: #27272a;
+    --glass-ink: #f4f4f5;
+    --glass-ink-dim: rgba(244, 244, 245, 0.64);
+    --glass-ink-faint: rgba(244, 244, 245, 0.4);
+    --glass-accent: #22c55e;
+    --glass-accent2: #22c55e;
+    --glass-success: #22c55e;
+    --glass-warning: #f59e0b;
+    --glass-danger: #ef4444;
+    --glass-divider: #27272a;
+    --glass-input-bg: #131316;
+    --glass-shadow: rgba(0, 0, 0, 0.35);
+    --glass-scrim: rgba(0, 0, 0, 0.5);
+    --blob-1: #131316;
+    --blob-2: #1c1c1f;
+    --blob-3: #27272a;
+    --blob-4: #131316;
+  }
+
+  [data-design-mode="minimal"].light {
+    --bg-base: #f7f7f8;
+    --panel: #ffffff;
+    --panel-strong: #f2f2f3;
+    --panel-border: #e4e4e7;
+    --glass-ink: #18181b;
+    --glass-ink-dim: rgba(24, 24, 27, 0.64);
+    --glass-ink-faint: rgba(24, 24, 27, 0.4);
+    --glass-accent: #16a34a;
+    --glass-accent2: #16a34a;
+    --glass-success: #16a34a;
+    --glass-warning: #b45309;
+    --glass-danger: #dc2626;
+    --glass-divider: #e4e4e7;
+    --glass-input-bg: #ffffff;
+    --glass-shadow: rgba(0, 0, 0, 0.08);
+    --glass-scrim: rgba(0, 0, 0, 0.4);
+    --blob-1: #ffffff;
+    --blob-2: #f2f2f3;
+    --blob-3: #e4e4e7;
+    --blob-4: #ffffff;
+  }
 }
 
 @layer utilities {
@@ -350,6 +405,59 @@
 
 [data-design-mode="brutalist"] .brutal-rect {
   display: block;
+}
+
+/* --- Minimal mode: flat, thin-bordered, softly-shadowed, small-radius ---
+   Colors are already handled above (same var names, re-pointed). This block
+   only overrides what glass mode bakes in as fixed shape (blur/translucency/
+   soft-glow shadow) or what brutalist bakes in as an extreme (zero radius,
+   hard offset shadow) — minimal sits between the two: real but small radius,
+   real but subtle shadow, no blur, no offset-shadow hover trick. */
+[data-design-mode="minimal"] .glass-panel,
+[data-design-mode="minimal"] .glass-panel-strong,
+[data-design-mode="minimal"] .glass-hero {
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--panel-border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  background-color: var(--panel);
+  background-image: none;
+  box-shadow: 0 1px 3px var(--glass-shadow);
+}
+
+[data-design-mode="minimal"] .glass-shadow-lg {
+  box-shadow: 0 12px 32px var(--glass-shadow);
+}
+
+[data-design-mode="minimal"] .border-panel-border,
+[data-design-mode="minimal"] [class*="border-glass-accent\/"] {
+  border-width: 1px !important;
+}
+
+/* Cap only the large glass-mode radii (20-24px) down to a restrained 12px;
+   rounded-full (avatars/pills/dock) and already-small radii are left alone —
+   unlike brutalist, minimal keeps real circles and pills. */
+[data-design-mode="minimal"] [class*="rounded-\[20px\]"],
+[data-design-mode="minimal"] [class*="rounded-\[22px\]"],
+[data-design-mode="minimal"] [class*="rounded-\[24px\]"],
+[data-design-mode="minimal"] [class*="rounded-\[28px\]"],
+[data-design-mode="minimal"] .rounded-2xl,
+[data-design-mode="minimal"] .rounded-3xl {
+  border-radius: 12px !important;
+}
+
+[data-design-mode="minimal"] [class*="rounded-t-\[24px\]"] {
+  border-radius: 12px 12px 0 0 !important;
+}
+
+[data-design-mode="minimal"] .text-data {
+  font-variant-numeric: tabular-nums;
+}
+
+[data-design-mode="minimal"] .mesh-blob,
+[data-design-mode="minimal"] .brutal-rect {
+  display: none;
 }
 
 @keyframes mesh-float-a {

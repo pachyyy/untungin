@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-export type DesignMode = "glass" | "brutalist";
+export type DesignMode = "glass" | "brutalist" | "minimal";
 
 const STORAGE_KEY = "untungin-design-mode";
 const DesignModeContext = React.createContext<{
@@ -11,9 +11,10 @@ const DesignModeContext = React.createContext<{
 } | null>(null);
 
 /** Inline, unhydrated script: reads localStorage and stamps the attribute on
- * <html> before first paint, so switching to brutalist doesn't flash glass
- * first — same no-FOUC trick next-themes uses for the dark/light class. */
-const NO_FLASH_SCRIPT = `(function(){try{var m=localStorage.getItem('${STORAGE_KEY}');if(m==='brutalist')document.documentElement.setAttribute('data-design-mode','brutalist');}catch(e){}})();`;
+ * <html> before first paint, so switching to brutalist/minimal doesn't flash
+ * glass first — same no-FOUC trick next-themes uses for the dark/light class.
+ * "glass" stays the implicit default (no attribute set). */
+const NO_FLASH_SCRIPT = `(function(){try{var m=localStorage.getItem('${STORAGE_KEY}');if(m==='brutalist'||m==='minimal')document.documentElement.setAttribute('data-design-mode',m);}catch(e){}})();`;
 
 export function DesignModeScript() {
   // eslint-disable-next-line react/no-danger
@@ -25,12 +26,14 @@ export function DesignModeProvider({ children }: { children: React.ReactNode }) 
 
   React.useEffect(() => {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "brutalist" || stored === "glass") setModeState(stored);
+    if (stored === "brutalist" || stored === "minimal" || stored === "glass") {
+      setModeState(stored);
+    }
   }, []);
 
   React.useEffect(() => {
-    if (mode === "brutalist") {
-      document.documentElement.setAttribute("data-design-mode", "brutalist");
+    if (mode === "brutalist" || mode === "minimal") {
+      document.documentElement.setAttribute("data-design-mode", mode);
     } else {
       document.documentElement.removeAttribute("data-design-mode");
     }

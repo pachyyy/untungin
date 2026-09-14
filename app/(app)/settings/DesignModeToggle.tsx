@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 const options: { value: DesignMode; label: string }[] = [
   { value: "glass", label: "Liquid Glass" },
   { value: "brutalist", label: "Brutalism" },
+  { value: "minimal", label: "Minimal" },
 ];
 
 export function DesignModeToggle() {
@@ -16,7 +17,7 @@ export function DesignModeToggle() {
   const current = mounted ? mode : "glass";
 
   return (
-    <div className="grid grid-cols-2 gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {options.map(({ value, label }) => {
         const active = current === value;
         return (
@@ -26,7 +27,7 @@ export function DesignModeToggle() {
             onClick={() => setMode(value)}
             aria-pressed={active}
             className={cn(
-              "brutal-interactive text-display rounded-2xl border p-3 text-sm font-semibold transition-colors",
+              "brutal-interactive text-display rounded-2xl border p-3 text-center text-[13px] font-semibold leading-tight transition-colors",
               active
                 ? "border-glass-accent/50 bg-glass-accent/10 text-glass-ink"
                 : "border-panel-border bg-panel text-glass-ink-dim hover:bg-panel-strong"
