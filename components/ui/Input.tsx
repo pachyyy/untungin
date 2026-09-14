@@ -3,7 +3,7 @@ import * as LabelPrimitive from "@radix-ui/react-label";
 import { cn } from "@/lib/utils";
 
 const fieldBase =
-  "flex h-11 w-full rounded-xl border border-input bg-card px-3 text-[15px] text-foreground outline-none transition placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
+  "flex h-11 w-full rounded-[12px] border border-panel-border bg-glass-input px-3 text-[15px] text-glass-ink outline-none transition placeholder:text-glass-ink-faint focus-visible:border-glass-accent focus-visible:ring-2 focus-visible:ring-glass-accent/25 disabled:cursor-not-allowed disabled:opacity-60";
 
 export const Label = React.forwardRef<
   React.ElementRef<typeof LabelPrimitive.Root>,
@@ -12,7 +12,7 @@ export const Label = React.forwardRef<
   <LabelPrimitive.Root
     ref={ref}
     className={cn(
-      "mb-1 block text-sm font-medium leading-none text-foreground peer-disabled:opacity-70",
+      "mb-1 block text-sm font-medium leading-none text-glass-ink-dim peer-disabled:opacity-70",
       className
     )}
     {...props}

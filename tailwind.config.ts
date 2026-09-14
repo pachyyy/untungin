@@ -52,6 +52,30 @@ const config: Config = {
           foreground: "hsl(var(--muted-foreground))",
           surface: "hsl(var(--muted))",
         },
+
+        // "Liquid glass" redesign tokens — raw rgba/hex vars, see globals.css.
+        "bg-base": "var(--bg-base)",
+        panel: "var(--panel)",
+        "panel-strong": "var(--panel-strong)",
+        "panel-border": "var(--panel-border)",
+        "glass-ink": {
+          DEFAULT: "var(--glass-ink)",
+          dim: "var(--glass-ink-dim)",
+          faint: "var(--glass-ink-faint)",
+        },
+        "glass-accent": "var(--glass-accent)",
+        "glass-accent2": "var(--glass-accent2)",
+        "glass-success": "var(--glass-success)",
+        "glass-warning": "var(--glass-warning)",
+        "glass-danger": "var(--glass-danger)",
+        "glass-divider": "var(--glass-divider)",
+        "glass-input": "var(--glass-input-bg)",
+        blob: {
+          1: "var(--blob-1)",
+          2: "var(--blob-2)",
+          3: "var(--blob-3)",
+          4: "var(--blob-4)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

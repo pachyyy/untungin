@@ -2,42 +2,40 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Home,
-  Package,
-  ShoppingCart,
-  BarChart3,
-  Settings,
-  type LucideIcon,
-} from "lucide-react";
+import { NAV_ITEMS, isNavItemActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
-
-const items: { href: string; label: string; icon: LucideIcon }[] = [
-  { href: "/dashboard", label: "Beranda", icon: Home },
-  { href: "/produk", label: "Produk", icon: Package },
-  { href: "/pesanan", label: "Pesanan", icon: ShoppingCart },
-  { href: "/laporan", label: "Laporan", icon: BarChart3 },
-  { href: "/settings", label: "Atur", icon: Settings },
-];
 
 export function BottomNav() {
   const pathname = usePathname();
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-card/95 backdrop-blur pb-[env(safe-area-inset-bottom)]">
-      <div className="mx-auto flex max-w-2xl items-stretch justify-around">
-        {items.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || pathname.startsWith(href + "/");
+    <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 lg:hidden">
+      <div className="glass-panel-strong glass-shadow-lg mx-auto flex max-w-md items-stretch gap-0.5 overflow-x-auto rounded-full px-2 py-1.5">
+        {NAV_ITEMS.map((item) => {
+          const active = isNavItemActive(pathname, item.href);
           return (
             <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex flex-1 flex-col items-center gap-0.5 py-2 text-[11px] font-medium transition-colors",
-                active ? "text-primary" : "text-muted-foreground"
-              )}
+              key={item.href}
+              href={item.href}
+              className="flex min-w-[52px] flex-1 flex-col items-center gap-1 rounded-full px-1.5 py-1.5 transition-colors"
             >
-              <Icon className="h-6 w-6" strokeWidth={active ? 2.4 : 2} />
-              {label}
+              <span
+                className={cn(
+                  "flex h-7 w-7 items-center justify-center rounded-[9px] text-[10px] font-bold transition-colors",
+                  active
+                    ? "bg-gradient-to-br from-glass-accent to-glass-accent2 text-white"
+                    : "bg-panel text-glass-ink-faint"
+                )}
+              >
+                {item.monogram}
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] font-medium",
+                  active ? "font-bold text-glass-ink" : "text-glass-ink-faint"
+                )}
+              >
+                {item.label}
+              </span>
             </Link>
           );
         })}

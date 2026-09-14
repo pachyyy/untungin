@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
@@ -30,7 +29,8 @@ import {
   untungPesanan,
   type Status,
 } from "@/lib/calc";
-import { Pencil } from "lucide-react";
+import { ChevronLeft, Pencil, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { createPesanan, updatePesanan, deletePesanan } from "@/lib/actions/pesanan";
 import {
   tambahPembayaran,
@@ -98,6 +98,10 @@ export function PesananManager({
   openNew: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedId = searchParams.get("id");
+
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("semua");
   const [query, setQuery] = useState("");
   const [formOpen, setFormOpen] = useState(false);
@@ -129,6 +133,13 @@ export function PesananManager({
     setFormOpen(true);
   }
 
+  function selectRow(id: string) {
+    router.replace(`${pathname}?id=${id}`, { scroll: false });
+  }
+  function clearSelection() {
+    router.replace(pathname, { scroll: false });
+  }
+
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return pesanan.filter((p) => {
@@ -146,61 +157,110 @@ export function PesananManager({
     });
   }, [filter, query, pesanan]);
 
+  const selected = pesanan.find((p) => p.id === selectedId) ?? null;
+
   return (
-    <div className="p-4">
-      <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Cari customer, no. HP, atau produk…"
-        className="mb-3"
-      />
-      {/* Filter tabs */}
-      <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={
-              "shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold capitalize transition " +
-              (filter === f
-                ? "bg-primary text-white"
-                : "bg-card text-muted-foreground border border-border")
-            }
-          >
-            {f === "semua" ? "Semua" : STATUS_LABEL[f as Status]}
-          </button>
-        ))}
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-152px)] lg:flex-row">
+      <div
+        className={cn(
+          "glass-panel flex-col rounded-[20px] lg:flex lg:w-[340px] lg:shrink-0",
+          selected ? "hidden lg:flex" : "flex"
+        )}
+      >
+        <div className="space-y-2 p-3">
+          <div className="flex items-center gap-2">
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Cari customer atau produk…"
+              className="flex-1"
+            />
+            <button
+              onClick={openNewForm}
+              aria-label="Tambah pesanan"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-white"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+            {FILTERS.map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+                  filter === f
+                    ? "bg-panel-strong text-glass-ink"
+                    : "text-glass-ink-faint hover:bg-panel"
+                )}
+              >
+                {f === "semua" ? "Semua" : STATUS_LABEL[f as Status]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-3 lg:min-h-0">
+          {shown.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-glass-ink-faint">
+              Tidak ada pesanan
+              {filter !== "semua" ? " dengan status ini" : ""}
+              {query.trim() ? " yang cocok" : ""}.
+            </p>
+          ) : (
+            shown.map((p) => {
+              const active = p.id === selectedId;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => selectRow(p.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    active
+                      ? "border-panel-border bg-panel-strong"
+                      : "border-transparent hover:bg-panel"
+                  )}
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-bold text-glass-ink">
+                      {p.namaCustomer}
+                    </span>
+                    <span className="block text-xs text-glass-ink-dim">
+                      {p.tanggal} · {formatRupiah(totalPesanan(p))}
+                    </span>
+                  </span>
+                  <span className="shrink-0">
+                    <StatusBadge status={p.status} />
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {shown.length === 0 ? (
-        <Card className="text-center text-sm text-muted">
-          Tidak ada pesanan
-          {filter !== "semua" ? " dengan status ini" : ""}
-          {query.trim() ? " yang cocok" : ""}.
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {shown.map((p) => (
-            <PesananCard
-              key={p.id}
-              p={p}
-              onEdit={() => openEditForm(p)}
-              onDelete={() => setConfirmDel(p)}
-              onPay={() => setPayingOrder(p)}
-            />
-          ))}
-        </div>
-      )}
-
-      <button
-        onClick={openNewForm}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 active:scale-95"
-        aria-label="Tambah pesanan"
+      <div
+        className={cn(
+          "glass-panel flex-1 rounded-[20px]",
+          selected ? "flex flex-col" : "hidden lg:flex lg:items-center lg:justify-center"
+        )}
       >
-        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
+        {selected ? (
+          <PesananDetail
+            key={selected.id}
+            p={selected}
+            onBack={clearSelection}
+            onEdit={() => openEditForm(selected)}
+            onDelete={() => setConfirmDel(selected)}
+            onPay={() => setPayingOrder(selected)}
+          />
+        ) : (
+          <p className="p-5 text-sm text-glass-ink-faint">
+            Pilih pesanan untuk melihat detail.
+          </p>
+        )}
+      </div>
 
       <PesananFormModal
         key={`${editingOrder?.id ?? "new"}-${formOpen}`}
@@ -220,6 +280,7 @@ export function PesananManager({
         onClose={() => setConfirmDel(null)}
         onDone={() => {
           setConfirmDel(null);
+          if (confirmDel?.id === selectedId) clearSelection();
           router.refresh();
         }}
       />
@@ -234,28 +295,38 @@ export function PesananManager({
   );
 }
 
-function PesananCard({
+function PesananDetail({
   p,
+  onBack,
   onEdit,
   onDelete,
   onPay,
 }: {
   p: PesananRow;
+  onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
   onPay: () => void;
 }) {
   const total = totalPesanan(p);
   const untung = untungPesanan(p);
-  const dibayar = p.pembayaran.reduce((s, b) => s + b.jumlah, 0);
-  const sisa = Math.max(0, total - dibayar);
 
   return (
-    <Card className="space-y-3">
-      <div className="flex items-start justify-between gap-2">
+    <div className="flex-1 space-y-5 overflow-y-auto p-5 lg:min-h-0">
+      <button
+        onClick={onBack}
+        className="flex items-center gap-1 text-sm font-semibold text-glass-accent lg:hidden"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Semua pesanan
+      </button>
+
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-bold text-ink">{p.namaCustomer}</p>
-          <p className="text-xs text-muted">
+          <h2 className="truncate text-[20px] font-extrabold text-glass-ink">
+            {p.namaCustomer}
+          </h2>
+          <p className="mt-0.5 text-sm text-glass-ink-dim">
             {p.tanggal}
             {p.noHp ? ` · ${p.noHp}` : ""}
           </p>
@@ -265,7 +336,7 @@ function PesananCard({
             type="button"
             onClick={onEdit}
             aria-label="Edit pesanan"
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-glass-ink-faint transition-colors hover:bg-panel-strong hover:text-glass-ink"
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -273,68 +344,83 @@ function PesananCard({
         </div>
       </div>
 
-      <ul className="space-y-1 text-sm">
+      <ul className="space-y-1.5 text-sm">
         {p.items.map((it) => (
-          <li key={it.id} className="flex justify-between gap-2">
-            <span className="min-w-0 truncate text-ink">
+          <li key={it.id} className="flex justify-between gap-2 rounded-[12px] bg-panel px-3 py-2">
+            <span className="min-w-0 truncate text-glass-ink">
               {!it.produkId && (
-                <span className="mr-1 rounded bg-warning/10 px-1 text-[10px] font-bold uppercase text-warning">
+                <span className="mr-1 rounded bg-glass-warning/15 px-1 text-[10px] font-bold uppercase text-glass-warning">
                   Dropship
                 </span>
               )}
-              {it.nama} <span className="text-muted">×{it.jumlah}</span>
+              {it.nama} <span className="text-glass-ink-faint">×{it.jumlah}</span>
             </span>
-            <span className="shrink-0 text-muted">
+            <span className="shrink-0 text-glass-ink-dim">
               {formatRupiah(it.hargaSaat * it.jumlah)}
             </span>
           </li>
         ))}
         {p.pakets.map((pk) => (
-          <li key={pk.id} className="rounded-lg bg-secondary px-2 py-1.5">
+          <li key={pk.id} className="rounded-[12px] bg-glass-accent/[0.08] px-3 py-2">
             <div className="flex justify-between gap-2">
-              <span className="min-w-0 truncate font-medium text-ink">
-                <span className="mr-1 rounded bg-primary/10 px-1 text-[10px] font-bold uppercase text-primary">
+              <span className="min-w-0 truncate font-medium text-glass-ink">
+                <span className="mr-1 rounded bg-glass-accent/15 px-1 text-[10px] font-bold uppercase text-glass-accent">
                   Paket
                 </span>
                 {pk.nama}
               </span>
-              <span className="shrink-0 text-muted">{formatRupiah(pk.harga)}</span>
+              <span className="shrink-0 text-glass-ink-dim">{formatRupiah(pk.harga)}</span>
             </div>
-            <p className="mt-0.5 truncate text-xs text-muted">
+            <p className="mt-0.5 truncate text-xs text-glass-ink-faint">
               {pk.komponen.map((k) => `${k.nama} ×${k.pcs}`).join(" + ")}
             </p>
           </li>
         ))}
       </ul>
 
-      <div className="flex items-center justify-between border-t border-border pt-2 text-sm">
-        <span className="font-semibold text-ink">
-          Total {formatRupiah(total)}
-        </span>
-        <span className="font-semibold text-success">
-          Untung {formatRupiah(untung)}
-        </span>
+      <div className="flex items-center justify-between border-y border-glass-divider py-3 text-sm">
+        <span className="font-bold text-glass-ink">Total {formatRupiah(total)}</span>
+        <span className="font-bold text-glass-success">Untung {formatRupiah(untung)}</span>
       </div>
 
-      {p.status !== "belum_bayar" && (
-        <div className="flex justify-between text-xs text-muted">
-          <span>Dibayar {formatRupiah(dibayar)}</span>
-          {p.status === "nyicil" && <span>Sisa {formatRupiah(sisa)}</span>}
-        </div>
-      )}
+      <div>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+          Pembayaran
+        </p>
+        {p.pembayaran.length === 0 ? (
+          <p className="rounded-[12px] bg-panel-strong px-3 py-3 text-center text-sm text-glass-ink-dim">
+            Belum ada pembayaran.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {p.pembayaran.map((b) => (
+              <div
+                key={b.id}
+                className="flex items-center justify-between rounded-[12px] bg-panel px-3 py-2 text-sm"
+              >
+                <span className="text-glass-ink-dim">
+                  {b.tanggalLabel}
+                  {b.metode ? ` · ${b.metode}` : ""}
+                </span>
+                <span className="font-semibold text-glass-ink">{formatRupiah(b.jumlah)}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-      <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" className="flex-1" onClick={onPay}>
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button onClick={onPay}>
           {p.status === "belum_bayar" ? "Catat Bayar" : "Kelola Pembayaran"}
         </Button>
-        <button
-          onClick={onDelete}
-          className="rounded-lg px-2 py-1 text-sm font-medium text-destructive hover:bg-destructive/10"
-        >
+        <Button variant="outline" onClick={onEdit}>
+          Edit
+        </Button>
+        <Button variant="danger" onClick={onDelete}>
           Hapus
-        </button>
+        </Button>
       </div>
-    </Card>
+    </div>
   );
 }
 
@@ -591,14 +677,14 @@ function PesananFormModal({
               <button
                 type="button"
                 onClick={addItem}
-                className="text-sm font-semibold text-primary"
+                className="text-sm font-semibold text-glass-accent"
               >
                 + Tambah item
               </button>
             </div>
 
             {items.length === 0 && (
-              <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+              <p className="rounded-[12px] bg-panel-strong px-3 py-2 text-sm text-glass-ink-dim">
                 Belum ada item satuan.
               </p>
             )}
@@ -610,10 +696,10 @@ function PesananFormModal({
                 return (
                   <div
                     key={idx}
-                    className="rounded-xl border border-border p-2"
+                    className="rounded-[14px] border border-panel-border p-2"
                   >
                     {produk.length > 0 && (
-                      <div className="mb-2 flex gap-1 rounded-lg bg-secondary p-0.5 text-xs font-semibold">
+                      <div className="mb-2 flex gap-1 rounded-[10px] bg-panel-strong p-0.5 text-xs font-semibold">
                         <button
                           type="button"
                           onClick={() =>
@@ -623,24 +709,24 @@ function PesananFormModal({
                               modal: "",
                             })
                           }
-                          className={
-                            "flex-1 rounded-md py-1 transition-colors " +
-                            (!isDropship
-                              ? "bg-card text-ink shadow-sm"
-                              : "text-muted-foreground")
-                          }
+                          className={cn(
+                            "flex-1 rounded-[8px] py-1 transition-colors",
+                            !isDropship
+                              ? "bg-panel text-glass-ink"
+                              : "text-glass-ink-faint"
+                          )}
                         >
                           Dari stok
                         </button>
                         <button
                           type="button"
                           onClick={() => updateItem(idx, { produkId: null })}
-                          className={
-                            "flex-1 rounded-md py-1 transition-colors " +
-                            (isDropship
-                              ? "bg-card text-ink shadow-sm"
-                              : "text-muted-foreground")
-                          }
+                          className={cn(
+                            "flex-1 rounded-[8px] py-1 transition-colors",
+                            isDropship
+                              ? "bg-panel text-glass-ink"
+                              : "text-glass-ink-faint"
+                          )}
                         >
                           Dropship
                         </button>
@@ -670,7 +756,7 @@ function PesananFormModal({
                       <button
                         type="button"
                         onClick={() => removeItem(idx)}
-                        className="px-1 text-destructive"
+                        className="px-1 text-glass-danger"
                         aria-label="Hapus item"
                       >
                         ✕
@@ -678,7 +764,7 @@ function PesananFormModal({
                     </div>
                     <div className="mt-2 grid grid-cols-2 gap-2">
                       <div>
-                        <span className="mb-0.5 block text-[11px] text-muted">
+                        <span className="mb-0.5 block text-[11px] text-glass-ink-faint">
                           Jumlah
                         </span>
                         <Input
@@ -696,7 +782,7 @@ function PesananFormModal({
                         />
                       </div>
                       <div>
-                        <span className="mb-0.5 block text-[11px] text-muted">
+                        <span className="mb-0.5 block text-[11px] text-glass-ink-faint">
                           Harga jual / pcs
                         </span>
                         <Input
@@ -714,7 +800,7 @@ function PesananFormModal({
                     </div>
                     {isDropship && (
                       <div className="mt-2">
-                        <span className="mb-0.5 block text-[11px] text-muted">
+                        <span className="mb-0.5 block text-[11px] text-glass-ink-faint">
                           HPP / pcs (modal dropship)
                         </span>
                         <Input
@@ -730,7 +816,7 @@ function PesananFormModal({
                         />
                       </div>
                     )}
-                    <div className="mt-1 flex justify-between px-1 text-xs text-muted">
+                    <div className="mt-1 flex justify-between px-1 text-xs text-glass-ink-faint">
                       <span>
                         {isDropship
                           ? "Dropship · tanpa stok"
@@ -754,14 +840,14 @@ function PesananFormModal({
               <button
                 type="button"
                 onClick={addPaket}
-                className="text-sm font-semibold text-primary"
+                className="text-sm font-semibold text-glass-accent"
               >
                 + Tambah paket
               </button>
             </div>
 
             {pakets.length === 0 && (
-              <p className="rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+              <p className="rounded-[12px] bg-panel-strong px-3 py-2 text-sm text-glass-ink-dim">
                 Belum ada paket. Gabungkan beberapa produk jadi satu harga.
               </p>
             )}
@@ -771,7 +857,7 @@ function PesananFormModal({
                 return (
                   <div
                     key={pi}
-                    className="rounded-xl border-2 border-primary/20 bg-primary/[0.03] p-3"
+                    className="rounded-[14px] border border-glass-accent/25 bg-glass-accent/[0.06] p-3"
                   >
                     <div className="mb-2 flex items-center gap-2">
                       <Input
@@ -783,7 +869,7 @@ function PesananFormModal({
                       <button
                         type="button"
                         onClick={() => removePaket(pi)}
-                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/10"
+                        className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-glass-danger hover:bg-glass-danger/10"
                       >
                         Hapus paket
                       </button>
@@ -791,7 +877,6 @@ function PesananFormModal({
 
                     <div className="space-y-2">
                       {pk.komponen.map((k, ki) => {
-                        const pr = produkMap.get(k.produkId);
                         return (
                           <div key={ki} className="flex items-center gap-2">
                             <Combobox
@@ -818,14 +903,14 @@ function PesananFormModal({
                                 })
                               }
                             />
-                            <span className="w-8 shrink-0 text-[11px] text-muted">
+                            <span className="w-8 shrink-0 text-[11px] text-glass-ink-faint">
                               pcs
                             </span>
                             <button
                               type="button"
                               onClick={() => removeKomp(pi, ki)}
                               disabled={pk.komponen.length === 1}
-                              className="px-1 text-destructive disabled:opacity-30"
+                              className="px-1 text-glass-danger disabled:opacity-30"
                               aria-label="Hapus komponen"
                             >
                               ✕
@@ -838,13 +923,13 @@ function PesananFormModal({
                     <button
                       type="button"
                       onClick={() => addKomp(pi)}
-                      className="mt-2 text-sm font-semibold text-primary"
+                      className="mt-2 text-sm font-semibold text-glass-accent"
                     >
                       + Tambah produk ke paket
                     </button>
 
-                    <div className="mt-3 flex items-center gap-2 border-t border-primary/10 pt-2">
-                      <span className="text-sm font-medium text-ink">
+                    <div className="mt-3 flex items-center gap-2 border-t border-glass-accent/15 pt-2">
+                      <span className="text-sm font-medium text-glass-ink">
                         Harga paket
                       </span>
                       <Input
@@ -866,15 +951,15 @@ function PesananFormModal({
           </div>
           )}
 
-          <div className="flex items-center justify-between rounded-xl bg-primary/5 px-3 py-2">
-            <span className="font-semibold text-ink">Total</span>
-            <span className="text-lg font-black text-primary">
+          <div className="flex items-center justify-between rounded-[14px] bg-glass-accent/10 px-3 py-2">
+            <span className="font-semibold text-glass-ink">Total</span>
+            <span className="text-lg font-black text-glass-accent">
               {formatRupiah(total)}
             </span>
           </div>
 
           {error && (
-            <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
               {error}
             </p>
           )}
@@ -968,7 +1053,7 @@ function CustomerCombobox({
                 >
                   <span className="line-clamp-1">{c.nama}</span>
                   {c.noHp && (
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
+                    <span className="ml-auto shrink-0 text-xs text-glass-ink-faint">
                       {c.noHp}
                     </span>
                   )}
@@ -977,7 +1062,7 @@ function CustomerCombobox({
             </CommandGroup>
           </CommandList>
           {search.trim() && !exactMatch && (
-            <div className="border-t border-border p-1">
+            <div className="border-t border-glass-divider p-1">
               <button
                 type="button"
                 onClick={() => {
@@ -985,7 +1070,7 @@ function CustomerCombobox({
                   setSearch(search.trim());
                   setOpen(false);
                 }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-primary hover:bg-primary/10"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-glass-accent hover:bg-glass-accent/10"
               >
                 Pakai &quot;{search.trim()}&quot; (baru)
               </button>
@@ -1078,7 +1163,7 @@ function PaymentModal({
     >
       {row && (
         <div className="space-y-3">
-          <div className="flex justify-between rounded-xl bg-secondary px-3 py-2 text-sm">
+          <div className="flex justify-between rounded-[14px] bg-panel-strong px-3 py-2 text-sm text-glass-ink">
             <span>Total {formatRupiah(total)}</span>
             <span>Dibayar {formatRupiah(dibayar)}</span>
             <span>Sisa {formatRupiah(sisa)}</span>
@@ -1089,14 +1174,14 @@ function PaymentModal({
               {row.pembayaran.map((b) => (
                 <li
                   key={b.id}
-                  className="flex items-center justify-between gap-2 rounded-lg border border-border px-2.5 py-1.5 text-sm"
+                  className="flex items-center justify-between gap-2 rounded-[12px] border border-panel-border px-2.5 py-1.5 text-sm"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-ink">
+                    <p className="truncate text-glass-ink">
                       {formatRupiah(b.jumlah)}
                       {b.metode ? ` · ${b.metode}` : ""}
                     </p>
-                    <p className="text-xs text-muted">
+                    <p className="text-xs text-glass-ink-faint">
                       {b.tanggalLabel} · {b.jenis === "cicilan" ? "Cicilan" : "Bayar penuh"}
                     </p>
                   </div>
@@ -1104,7 +1189,7 @@ function PaymentModal({
                     type="button"
                     onClick={() => removePayment(b.id)}
                     disabled={pending}
-                    className="shrink-0 px-1 text-destructive"
+                    className="shrink-0 px-1 text-glass-danger"
                     aria-label="Hapus pembayaran"
                   >
                     ✕
@@ -1115,7 +1200,7 @@ function PaymentModal({
           )}
 
           {sisa > 0 && (
-            <div className="space-y-2 rounded-xl border border-border p-3">
+            <div className="space-y-2 rounded-[14px] border border-panel-border p-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <Label className="text-xs">Tanggal</Label>
@@ -1131,7 +1216,7 @@ function PaymentModal({
                   <select
                     value={metode}
                     onChange={(e) => setMetode(e.target.value)}
-                    className="flex h-10 w-full rounded-xl border border-input bg-card px-3 text-sm text-foreground"
+                    className="flex h-10 w-full rounded-[12px] border border-panel-border bg-glass-input px-3 text-sm text-glass-ink"
                   >
                     <option value="">— Tanpa metode —</option>
                     {METODE_OPTIONS.map((m) => (
@@ -1151,7 +1236,7 @@ function PaymentModal({
                   onChange={(e) => setJumlah(e.target.value.replace(/[^0-9]/g, ""))}
                 />
               </div>
-              {error && <p className="text-sm text-destructive">{error}</p>}
+              {error && <p className="text-sm text-glass-danger">{error}</p>}
               <Button
                 type="button"
                 size="sm"
@@ -1206,9 +1291,9 @@ function DeleteModal({
 
   return (
     <Modal open={!!row} onClose={onClose} title="Hapus pesanan?">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-glass-ink-dim">
         Yakin ingin menghapus pesanan{" "}
-        <span className="font-semibold text-ink">{row?.namaCustomer}</span>? Jika
+        <span className="font-semibold text-glass-ink">{row?.namaCustomer}</span>? Jika
         stok sudah dipotong, stok akan dikembalikan.
       </p>
       <div className="mt-4 flex gap-2">

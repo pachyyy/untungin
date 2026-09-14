@@ -55,19 +55,19 @@ export function Combobox({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-input bg-card px-3 text-[15px] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60",
+            "flex h-11 w-full items-center justify-between gap-2 rounded-[12px] border border-panel-border bg-glass-input px-3 text-[15px] text-glass-ink outline-none transition focus:border-glass-accent focus:ring-2 focus:ring-glass-accent/25 disabled:cursor-not-allowed disabled:opacity-60",
             className
           )}
         >
           <span
             className={cn(
               "line-clamp-1 text-left",
-              !selected && "text-muted-foreground"
+              !selected && "text-glass-ink-faint"
             )}
           >
             {selected ? selected.label : placeholder}
           </span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+          <ChevronsUpDown className="h-4 w-4 shrink-0 text-glass-ink-faint" />
         </button>
       </PopoverTrigger>
       <PopoverContent>
@@ -91,7 +91,7 @@ export function Combobox({
                 >
                   <Check
                     className={cn(
-                      "h-4 w-4 text-primary",
+                      "h-4 w-4 text-glass-accent",
                       value === o.value ? "opacity-100" : "opacity-0"
                     )}
                   />
@@ -101,7 +101,7 @@ export function Combobox({
             </CommandGroup>
           </CommandList>
           {footer && (
-            <div className="border-t border-border p-1">
+            <div className="border-t border-glass-divider p-1">
               {footer({ close: () => setOpen(false) })}
             </div>
           )}

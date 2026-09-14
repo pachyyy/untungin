@@ -28,10 +28,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#F8FAFC" },
-    { media: "(prefers-color-scheme: dark)", color: "#0F172A" },
-  ],
+  // App theme is user-toggled (dark by default), not OS-driven, so this is
+  // a single static color matching --bg-base for the default (dark) theme.
+  themeColor: "#05070d",
 };
 
 export default function RootLayout({
@@ -44,8 +43,8 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}

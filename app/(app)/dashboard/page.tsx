@@ -2,8 +2,6 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/format";
 import { totalPesanan, untungPesanan } from "@/lib/calc";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
 
 export const dynamic = "force-dynamic";
 
@@ -36,78 +34,82 @@ export default async function DashboardPage() {
   const nilaiStok = semuaProduk.reduce((s, p) => s + p.stok * p.hargaModal, 0);
 
   return (
-    <div>
-      <PageHeader title="Beranda" subtitle="Ringkasan bisnismu" />
-      <div className="space-y-4 p-4">
-        <div className="grid grid-cols-2 gap-3">
-          <Card className="col-span-2 bg-primary text-white">
-            <p className="text-sm/none opacity-90">Untung bulan ini</p>
-            <p className="mt-2 text-3xl font-black">{formatRupiah(untung)}</p>
-            <p className="mt-1 text-xs opacity-80">Dari pesanan lunas</p>
-          </Card>
-          <Card>
-            <p className="text-xs font-medium text-muted">Omzet bulan ini</p>
-            <p className="mt-1 text-lg font-bold text-ink">
-              {formatRupiah(omzet)}
-            </p>
-          </Card>
-          <Card>
-            <p className="text-xs font-medium text-muted">Nilai Stok (HPP)</p>
-            <p className="mt-1 text-lg font-bold text-ink">{formatRupiah(nilaiStok)}</p>
-          </Card>
-          <Card className="col-span-2">
-            <p className="text-xs font-medium text-muted">Pesanan pending</p>
-            <p className="mt-1 text-lg font-bold text-ink">{pendingCount}</p>
-          </Card>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <Link href="/pesanan?new=1">
-            <Card className="flex h-full items-center gap-3 transition active:scale-[0.98]">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <PlusIcon />
-              </span>
-              <span className="font-semibold text-ink">Tambah Pesanan</span>
-            </Card>
-          </Link>
-          <Link href="/produk?new=1">
-            <Card className="flex h-full items-center gap-3 transition active:scale-[0.98]">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success/10 text-success">
-                <PlusIcon />
-              </span>
-              <span className="font-semibold text-ink">Tambah Produk</span>
-            </Card>
-          </Link>
-        </div>
-
-        <section>
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="font-bold text-ink">Stok menipis</h2>
-            <Link href="/produk" className="text-sm font-medium text-primary">
-              Lihat semua
-            </Link>
-          </div>
-          {stokMenipis.length === 0 ? (
-            <Card className="text-center text-sm text-muted">
-              Semua stok aman 👍
-            </Card>
-          ) : (
-            <div className="space-y-2">
-              {stokMenipis.map((p) => (
-                <Card
-                  key={p.id}
-                  className="flex items-center justify-between border-l-4 border-l-warning py-3"
-                >
-                  <span className="font-medium text-ink">{p.nama}</span>
-                  <span className="rounded-full bg-warning/10 px-2.5 py-1 text-sm font-bold text-warning">
-                    Sisa {p.stok}
-                  </span>
-                </Card>
-              ))}
-            </div>
-          )}
-        </section>
+    <div className="space-y-4">
+      <div className="glass-hero rounded-[22px] p-5">
+        <p className="text-[13px] font-semibold text-glass-ink-dim">Untung bulan ini</p>
+        <p className="mt-2 text-[38px] font-extrabold leading-none text-glass-ink">
+          {formatRupiah(untung)}
+        </p>
+        <p className="mt-2 text-xs text-glass-ink-dim">Dari pesanan lunas</p>
       </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="glass-panel rounded-[20px] p-4">
+          <p className="text-xs font-medium text-glass-ink-dim">Omzet bulan ini</p>
+          <p className="mt-1 text-[20px] font-extrabold text-glass-ink">
+            {formatRupiah(omzet)}
+          </p>
+        </div>
+        <div className="glass-panel rounded-[20px] p-4">
+          <p className="text-xs font-medium text-glass-ink-dim">Nilai Stok (HPP)</p>
+          <p className="mt-1 text-[20px] font-extrabold text-glass-ink">
+            {formatRupiah(nilaiStok)}
+          </p>
+        </div>
+        <div className="glass-panel col-span-2 rounded-[20px] p-4 sm:col-span-1">
+          <p className="text-xs font-medium text-glass-ink-dim">Pesanan pending</p>
+          <p className="mt-1 text-[20px] font-extrabold text-glass-ink">{pendingCount}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Link
+          href="/pesanan?new=1"
+          className="glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
+        >
+          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-glass-accent/15 text-glass-accent">
+            <PlusIcon />
+          </span>
+          <span className="font-bold text-glass-ink">Tambah Pesanan</span>
+        </Link>
+        <Link
+          href="/produk?new=1"
+          className="glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
+        >
+          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-glass-success/15 text-glass-success">
+            <PlusIcon />
+          </span>
+          <span className="font-bold text-glass-ink">Tambah Produk</span>
+        </Link>
+      </div>
+
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-bold text-glass-ink">Stok menipis</h2>
+          <Link href="/produk" className="text-sm font-semibold text-glass-accent">
+            Lihat semua
+          </Link>
+        </div>
+        {stokMenipis.length === 0 ? (
+          <div className="glass-panel rounded-[20px] p-4 text-center text-sm text-glass-ink-dim">
+            Semua stok aman
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {stokMenipis.map((p) => (
+              <div
+                key={p.id}
+                className="glass-panel flex items-center justify-between rounded-[20px] border-l-[3px] border-l-glass-warning py-3 pl-3.5 pr-4"
+              >
+                <span className="font-medium text-glass-ink">{p.nama}</span>
+                <span className="rounded-full bg-glass-warning/15 px-2.5 py-1 text-sm font-bold text-glass-warning">
+                  Sisa {p.stok}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

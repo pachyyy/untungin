@@ -12,7 +12,7 @@ export const Command = React.forwardRef<
   <CommandPrimitive
     ref={ref}
     className={cn(
-      "flex h-full w-full flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground",
+      "flex h-full w-full flex-col overflow-hidden rounded-[14px] bg-transparent text-glass-ink",
       className
     )}
     {...props}
@@ -24,12 +24,12 @@ export const CommandInput = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive.Input>,
   React.ComponentPropsWithoutRef<typeof CommandPrimitive.Input>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-border px-3">
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+  <div className="flex items-center border-b border-glass-divider px-3">
+    <Search className="mr-2 h-4 w-4 shrink-0 text-glass-ink-faint" />
     <CommandPrimitive.Input
       ref={ref}
       className={cn(
-        "flex h-11 w-full bg-transparent py-3 text-[15px] outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-11 w-full bg-transparent py-3 text-[15px] text-glass-ink outline-none placeholder:text-glass-ink-faint disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
       {...props}
@@ -56,7 +56,7 @@ export const CommandEmpty = React.forwardRef<
 >((props, ref) => (
   <CommandPrimitive.Empty
     ref={ref}
-    className="py-6 text-center text-sm text-muted-foreground"
+    className="py-6 text-center text-sm text-glass-ink-faint"
     {...props}
   />
 ));
@@ -68,7 +68,7 @@ export const CommandGroup = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <CommandPrimitive.Group
     ref={ref}
-    className={cn("overflow-hidden p-1 text-foreground", className)}
+    className={cn("overflow-hidden p-1 text-glass-ink", className)}
     {...props}
   />
 ));
@@ -81,7 +81,7 @@ export const CommandItem = React.forwardRef<
   <CommandPrimitive.Item
     ref={ref}
     className={cn(
-      "relative flex cursor-pointer select-none items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] outline-none data-[selected=true]:bg-secondary data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
+      "relative flex cursor-pointer select-none items-center gap-2 rounded-[10px] px-3 py-2.5 text-[15px] text-glass-ink outline-none data-[selected=true]:bg-panel-strong data-[disabled=true]:pointer-events-none data-[disabled=true]:opacity-50",
       className
     )}
     {...props}

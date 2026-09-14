@@ -1,34 +1,25 @@
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
+function GlassSkeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-panel-strong ${className ?? ""}`} />;
+}
 
 export default function PesananLoading() {
   return (
-    <div>
-      <PageHeader title="Pesanan" subtitle="Memuat…" />
-      <div className="p-4">
-        <div className="mb-3 flex gap-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-8 w-20 rounded-full" />
-          ))}
-        </div>
-        <div className="space-y-3">
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-152px)] lg:flex-row">
+      <div className="glass-panel space-y-2 rounded-[20px] p-3 lg:w-[340px] lg:shrink-0">
+        <GlassSkeleton className="h-11 w-full rounded-[12px]" />
+        <div className="flex gap-1.5">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-6 w-16 rounded-full" />
-              </div>
-              <Skeleton className="h-3 w-full" />
-              <Skeleton className="h-3 w-2/3" />
-              <div className="flex justify-between border-t border-border pt-2">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            </Card>
+            <GlassSkeleton key={i} className="h-6 w-16 rounded-full" />
           ))}
         </div>
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="space-y-1.5 rounded-[14px] px-3 py-2.5">
+            <GlassSkeleton className="h-4 w-32" />
+            <GlassSkeleton className="h-3 w-24" />
+          </div>
+        ))}
       </div>
+      <div className="glass-panel hidden flex-1 rounded-[20px] lg:block" />
     </div>
   );
 }

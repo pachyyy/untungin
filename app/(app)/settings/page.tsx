@@ -1,7 +1,4 @@
 import { LogOut } from "lucide-react";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
 import { logoutAction } from "@/lib/actions/auth";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -9,31 +6,30 @@ export const metadata = { title: "Pengaturan · Untungin" };
 
 export default function SettingsPage() {
   return (
-    <div>
-      <PageHeader title="Pengaturan" subtitle="Sesuaikan aplikasimu" />
-      <div className="space-y-4 p-4">
-        <Card className="space-y-3">
-          <div>
-            <h2 className="font-bold text-foreground">Tampilan</h2>
-            <p className="text-sm text-muted-foreground">
-              Pilih tema terang, gelap, atau ikuti sistem.
-            </p>
-          </div>
-          <ThemeToggle />
-        </Card>
+    <div className="mx-auto max-w-[560px] space-y-4">
+      <div className="glass-panel space-y-3 rounded-[20px] p-5">
+        <div>
+          <h2 className="font-bold text-glass-ink">Tampilan</h2>
+          <p className="text-sm text-glass-ink-dim">Pilih tema terang atau gelap.</p>
+        </div>
+        <ThemeToggle />
+      </div>
 
-        <Card>
-          <h2 className="font-bold text-foreground">Tentang</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Untungin — kelola produk, pesanan, dan untung bisnis resellermu.
+      <div className="glass-panel space-y-3 rounded-[20px] p-5">
+        <div>
+          <h2 className="font-bold text-glass-ink">Sesi</h2>
+          <p className="text-sm text-glass-ink-dim">
+            Sesi berlaku 7 hari di perangkat ini.
           </p>
-        </Card>
-
+        </div>
         <form action={logoutAction}>
-          <Button type="submit" variant="outline" className="w-full">
+          <button
+            type="submit"
+            className="flex h-11 w-full items-center justify-center gap-2 rounded-[14px] bg-glass-danger/15 text-[15px] font-bold text-glass-danger transition-colors hover:bg-glass-danger/25"
+          >
             <LogOut className="h-5 w-5" />
             Keluar
-          </Button>
+          </button>
         </form>
       </div>
     </div>

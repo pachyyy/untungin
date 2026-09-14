@@ -1,38 +1,40 @@
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
-import { Skeleton } from "@/components/ui/Skeleton";
+function GlassSkeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-md bg-panel-strong ${className ?? ""}`} />;
+}
 
 export default function LaporanLoading() {
   return (
-    <div>
-      <PageHeader title="Laporan" subtitle="Memuat…" />
-      <div className="space-y-4 p-4">
-        <div className="flex gap-2">
-          <Skeleton className="h-14 flex-1" />
-          <Skeleton className="h-14 flex-1" />
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i} className="h-16 p-3">
-              <Skeleton className="h-3 w-12" />
-              <Skeleton className="mt-2 h-4 w-16" />
-            </Card>
-          ))}
-        </div>
-        <Card>
-          <Skeleton className="mb-3 h-5 w-32" />
-          <Skeleton className="h-56 w-full" />
-        </Card>
-        <Card className="space-y-3">
-          <Skeleton className="h-5 w-32" />
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <Skeleton className="h-6 w-6 rounded-full" />
-              <Skeleton className="h-4 flex-1" />
-              <Skeleton className="h-4 w-16" />
-            </div>
-          ))}
-        </Card>
+    <div className="space-y-4">
+      <div className="flex gap-1.5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <GlassSkeleton key={i} className="h-8 w-20 rounded-full" />
+        ))}
+      </div>
+      <div className="glass-panel h-[128px] rounded-[22px] p-5">
+        <GlassSkeleton className="h-4 w-28" />
+        <GlassSkeleton className="mt-3 h-8 w-40" />
+      </div>
+      <div className="grid grid-cols-3 gap-3">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="glass-panel h-16 rounded-[20px] p-3">
+            <GlassSkeleton className="h-3 w-12" />
+            <GlassSkeleton className="mt-2 h-4 w-16" />
+          </div>
+        ))}
+      </div>
+      <div className="glass-panel rounded-[20px] p-5">
+        <GlassSkeleton className="mb-3 h-5 w-32" />
+        <GlassSkeleton className="h-56 w-full" />
+      </div>
+      <div className="glass-panel space-y-3 rounded-[20px] p-5">
+        <GlassSkeleton className="h-5 w-32" />
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3">
+            <GlassSkeleton className="h-6 w-6 rounded-full" />
+            <GlassSkeleton className="h-4 flex-1" />
+            <GlassSkeleton className="h-4 w-16" />
+          </div>
+        ))}
       </div>
     </div>
   );

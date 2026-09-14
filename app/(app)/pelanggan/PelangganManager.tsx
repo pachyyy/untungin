@@ -1,15 +1,16 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import { formatRupiah, formatTanggal } from "@/lib/format";
+import { formatRupiah } from "@/lib/format";
 import { totalPesanan, untungPesanan } from "@/lib/calc";
+import { cn } from "@/lib/utils";
 import {
   createCustomer,
   updateCustomer,
@@ -55,11 +56,14 @@ type CustomerRow = {
 
 export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedId = searchParams.get("id");
+
   const [editing, setEditing] = useState<CustomerRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState<CustomerRow | null>(null);
   const [query, setQuery] = useState("");
-  const [sheetCustomer, setSheetCustomer] = useState<CustomerRow | null>(null);
   const [sheetPesanan, setSheetPesanan] = useState<CustomerPesananRow | null>(
     null
   );
@@ -74,67 +78,168 @@ export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
     );
   }, [customers, query]);
 
-  return (
-    <div className="p-4">
-      <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Cari nama atau no. HP…"
-        className="mb-3"
-      />
-      {shown.length === 0 ? (
-        <Card className="text-center text-sm text-muted">
-          {customers.length === 0
-            ? "Belum ada pelanggan."
-            : "Tidak ada pelanggan yang cocok."}
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {shown.map((c) => (
-            <Card key={c.id} className="flex items-center justify-between gap-3">
-              <button
-                onClick={() => setSheetCustomer(c)}
-                className="min-w-0 flex-1 text-left"
-              >
-                <p className="truncate font-semibold text-ink">{c.nama}</p>
-                <p className="truncate text-sm text-muted">
-                  {c.noHp || "Tanpa kontak"} · {c.pesanan.length} pesanan
-                </p>
-              </button>
-              <div className="flex shrink-0 items-center gap-2">
-                <button
-                  onClick={() => {
-                    setEditing(c);
-                    setFormOpen(true);
-                  }}
-                  className="text-xs font-medium text-primary hover:underline"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => setConfirmDel(c)}
-                  className="text-xs font-medium text-destructive hover:underline"
-                >
-                  Hapus
-                </button>
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+  const selected = customers.find((c) => c.id === selectedId) ?? null;
 
-      <button
-        onClick={() => {
-          setEditing(null);
-          setFormOpen(true);
-        }}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 active:scale-95"
-        aria-label="Tambah pelanggan"
+  function selectRow(id: string) {
+    router.replace(`${pathname}?id=${id}`, { scroll: false });
+  }
+  function clearSelection() {
+    router.replace(pathname, { scroll: false });
+  }
+
+  function openAdd() {
+    setEditing(null);
+    setFormOpen(true);
+  }
+  function openEdit(c: CustomerRow) {
+    setEditing(c);
+    setFormOpen(true);
+  }
+
+  const totalBelanja = selected
+    ? selected.pesanan.reduce((s, p) => s + totalPesanan(p), 0)
+    : 0;
+
+  return (
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-152px)] lg:flex-row">
+      <div
+        className={cn(
+          "glass-panel flex-col rounded-[20px] lg:flex lg:w-[340px] lg:shrink-0",
+          selected ? "hidden lg:flex" : "flex"
+        )}
       >
-        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
+        <div className="flex items-center gap-2 p-3">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            placeholder="Cari nama atau no. HP…"
+            className="flex-1"
+          />
+          <button
+            onClick={openAdd}
+            aria-label="Tambah pelanggan"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-white"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-3 lg:min-h-0">
+          {shown.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-glass-ink-faint">
+              {customers.length === 0
+                ? "Belum ada pelanggan."
+                : "Tidak ada pelanggan yang cocok."}
+            </p>
+          ) : (
+            shown.map((c) => {
+              const active = c.id === selectedId;
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => selectRow(c.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    active
+                      ? "border-panel-border bg-panel-strong"
+                      : "border-transparent hover:bg-panel"
+                  )}
+                >
+                  <span className="min-w-0 truncate text-[14px] font-bold text-glass-ink">
+                    {c.nama}
+                  </span>
+                  <span className="shrink-0 text-xs text-glass-ink-dim">
+                    {c.pesanan.length} pesanan
+                  </span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "glass-panel flex-1 rounded-[20px]",
+          selected ? "flex flex-col" : "hidden lg:flex lg:items-center lg:justify-center"
+        )}
+      >
+        {selected ? (
+          <div className="flex-1 space-y-5 overflow-y-auto p-5 lg:min-h-0">
+            <button
+              onClick={clearSelection}
+              className="flex items-center gap-1 text-sm font-semibold text-glass-accent lg:hidden"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Semua pelanggan
+            </button>
+
+            <div>
+              <h2 className="text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
+              <p className="mt-0.5 text-sm text-glass-ink-dim">
+                {selected.noHp || "Tanpa nomor HP"}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[14px] bg-panel-strong p-3">
+                <p className="text-xs text-glass-ink-dim">Jumlah Pesanan</p>
+                <p className="mt-1 text-lg font-bold text-glass-ink">
+                  {selected.pesanan.length}
+                </p>
+              </div>
+              <div className="rounded-[14px] bg-panel-strong p-3">
+                <p className="text-xs text-glass-ink-dim">Total Belanja</p>
+                <p className="mt-1 text-lg font-bold text-glass-ink">
+                  {formatRupiah(totalBelanja)}
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+                Riwayat pesanan
+              </p>
+              {selected.pesanan.length === 0 ? (
+                <p className="rounded-[14px] bg-panel-strong px-3 py-4 text-center text-sm text-glass-ink-dim">
+                  Belum ada pesanan.
+                </p>
+              ) : (
+                <div className="space-y-1.5">
+                  {selected.pesanan.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setSheetPesanan(p)}
+                      className="flex w-full items-center justify-between gap-2 rounded-[12px] bg-panel px-3 py-2.5 text-left text-sm transition-colors hover:bg-panel-strong"
+                    >
+                      <span className="text-glass-ink-dim">{p.tanggal}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-semibold text-glass-ink">
+                          {formatRupiah(totalPesanan(p))}
+                        </span>
+                        <StatusBadge status={p.status} />
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button variant="outline" onClick={() => openEdit(selected)}>
+                Edit Pelanggan
+              </Button>
+              <Button variant="danger" onClick={() => setConfirmDel(selected)}>
+                Hapus
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="p-5 text-sm text-glass-ink-faint">
+            Pilih pelanggan untuk melihat detail.
+          </p>
+        )}
+      </div>
 
       <FormModal
         key={editing?.id ?? "new"}
@@ -152,68 +257,13 @@ export function PelangganManager({ customers }: { customers: CustomerRow[] }) {
         onClose={() => setConfirmDel(null)}
         onDone={() => {
           setConfirmDel(null);
+          if (confirmDel?.id === selectedId) clearSelection();
           router.refresh();
         }}
       />
 
-      <PesananListSheet
-        customer={sheetCustomer}
-        onClose={() => setSheetCustomer(null)}
-        onSelectPesanan={(p) => setSheetPesanan(p)}
-      />
-
-      <PesananDetailSheet
-        pesanan={sheetPesanan}
-        onClose={() => setSheetPesanan(null)}
-      />
+      <PesananDetailSheet pesanan={sheetPesanan} onClose={() => setSheetPesanan(null)} />
     </div>
-  );
-}
-
-function PesananListSheet({
-  customer,
-  onClose,
-  onSelectPesanan,
-}: {
-  customer: CustomerRow | null;
-  onClose: () => void;
-  onSelectPesanan: (p: CustomerPesananRow) => void;
-}) {
-  return (
-    <Modal
-      open={!!customer}
-      onClose={onClose}
-      title={customer ? `Pesanan ${customer.nama}` : undefined}
-    >
-      {customer && customer.pesanan.length === 0 && (
-        <p className="text-sm text-muted">Belum ada pesanan.</p>
-      )}
-      {customer && customer.pesanan.length > 0 && (
-        <div className="space-y-2">
-          {customer.pesanan.map((p) => {
-            const produkNames = [
-              ...p.items.map((it) => it.nama),
-              ...p.pakets.map((pk) => pk.nama),
-            ];
-            return (
-              <button
-                key={p.id}
-                onClick={() => onSelectPesanan(p)}
-                className="block w-full rounded-xl border border-border p-3 text-left transition hover:bg-secondary"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-medium text-ink">{p.tanggal}</span>
-                  <StatusBadge status={p.status} />
-                </div>
-                <p className="mt-1 truncate text-sm text-muted">
-                  {produkNames.join(", ") || "Tidak ada produk"}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </Modal>
   );
 }
 
@@ -232,44 +282,44 @@ function PesananDetailSheet({
       {pesanan && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm text-muted">{pesanan.tanggal}</span>
+            <span className="text-sm text-glass-ink-dim">{pesanan.tanggal}</span>
             <StatusBadge status={pesanan.status} />
           </div>
 
           <ul className="space-y-1 text-sm">
             {pesanan.items.map((it) => (
               <li key={it.id} className="flex justify-between gap-2">
-                <span className="min-w-0 truncate text-ink">
-                  {it.nama} <span className="text-muted">×{it.jumlah}</span>
+                <span className="min-w-0 truncate text-glass-ink">
+                  {it.nama} <span className="text-glass-ink-faint">×{it.jumlah}</span>
                 </span>
-                <span className="shrink-0 text-muted">
+                <span className="shrink-0 text-glass-ink-dim">
                   {formatRupiah(it.hargaSaat * it.jumlah)}
                 </span>
               </li>
             ))}
             {pesanan.pakets.map((pk) => (
-              <li key={pk.id} className="rounded-lg bg-secondary px-2 py-1.5">
+              <li key={pk.id} className="rounded-[12px] bg-panel-strong px-2 py-1.5">
                 <div className="flex justify-between gap-2">
-                  <span className="min-w-0 truncate font-medium text-ink">
-                    <span className="mr-1 rounded bg-primary/10 px-1 text-[10px] font-bold uppercase text-primary">
+                  <span className="min-w-0 truncate font-medium text-glass-ink">
+                    <span className="mr-1 rounded bg-glass-accent/15 px-1 text-[10px] font-bold uppercase text-glass-accent">
                       Paket
                     </span>
                     {pk.nama}
                   </span>
-                  <span className="shrink-0 text-muted">{formatRupiah(pk.harga)}</span>
+                  <span className="shrink-0 text-glass-ink-dim">{formatRupiah(pk.harga)}</span>
                 </div>
-                <p className="mt-0.5 truncate text-xs text-muted">
+                <p className="mt-0.5 truncate text-xs text-glass-ink-faint">
                   {pk.komponen.map((k) => `${k.nama} ×${k.pcs}`).join(" + ")}
                 </p>
               </li>
             ))}
           </ul>
 
-          <div className="flex items-center justify-between border-t border-border pt-2 text-sm">
-            <span className="font-semibold text-ink">
+          <div className="flex items-center justify-between border-t border-glass-divider pt-2 text-sm">
+            <span className="font-semibold text-glass-ink">
               Total {formatRupiah(total)}
             </span>
-            <span className="font-semibold text-success">
+            <span className="font-semibold text-glass-success">
               Untung {formatRupiah(untung)}
             </span>
           </div>
@@ -342,7 +392,7 @@ function FormModal({
           />
         </div>
         {error && (
-          <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
             {error}
           </p>
         )}
@@ -385,12 +435,12 @@ function DeleteModal({
 
   return (
     <Modal open={!!row} onClose={onClose} title="Hapus pelanggan?">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-glass-ink-dim">
         Yakin ingin menghapus{" "}
-        <span className="font-semibold text-ink">{row?.nama}</span>?
+        <span className="font-semibold text-glass-ink">{row?.nama}</span>?
       </p>
       {error && (
-        <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="mt-3 rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
           {error}
         </p>
       )}

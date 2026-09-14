@@ -3,16 +3,18 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction, type LoginState } from "@/lib/actions/auth";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Input, Label } from "@/components/ui/Input";
+import { cn } from "@/lib/utils";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex h-[48px] w-full items-center justify-center rounded-[14px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-[15px] font-bold text-white transition-opacity disabled:opacity-60"
+    >
       {pending ? "Memeriksa…" : "Masuk"}
-    </Button>
+    </button>
   );
 }
 
@@ -20,27 +22,34 @@ export function LoginForm() {
   const [state, formAction] = useActionState<LoginState, FormData>(loginAction, {});
 
   return (
-    <Card>
-      <form action={formAction} className="space-y-4">
-        <div>
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoFocus
-            autoComplete="current-password"
-            placeholder="Masukkan password"
-            required
-          />
-        </div>
-        {state.error && (
-          <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-            {state.error}
-          </p>
-        )}
-        <SubmitButton />
-      </form>
-    </Card>
+    <form action={formAction} className="space-y-4">
+      <div>
+        <label
+          htmlFor="password"
+          className="mb-1.5 block text-sm font-medium text-glass-ink-dim"
+        >
+          Password
+        </label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autoFocus
+          autoComplete="current-password"
+          placeholder="Masukkan password"
+          required
+          className={cn(
+            "h-[48px] w-full rounded-[14px] border border-panel-border bg-glass-input px-3.5 text-[15px] text-glass-ink outline-none transition placeholder:text-glass-ink-faint",
+            "focus-visible:border-glass-accent focus-visible:ring-2 focus-visible:ring-glass-accent/25"
+          )}
+        />
+      </div>
+      {state.error && (
+        <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
+          {state.error}
+        </p>
+      )}
+      <SubmitButton />
+    </form>
   );
 }

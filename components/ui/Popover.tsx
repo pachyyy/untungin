@@ -18,7 +18,7 @@ export const PopoverContent = React.forwardRef<
       align={align}
       sideOffset={sideOffset}
       className={cn(
-        "z-[70] w-[--radix-popover-trigger-width] rounded-xl border border-border bg-popover p-0 text-popover-foreground shadow-md outline-none",
+        "z-[70] w-[--radix-popover-trigger-width] rounded-[14px] glass-panel-strong glass-shadow-lg p-0 text-glass-ink outline-none",
         "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
         "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
         className

@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { ChevronLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
 import { Input, Label } from "@/components/ui/Input";
 import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
-import { Plus } from "lucide-react";
 import { formatRupiah } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import { createProduk, updateProduk, deleteProduk } from "@/lib/actions/produk";
 import { restockProduk } from "@/lib/actions/restock";
 
@@ -30,6 +30,8 @@ type ProdukRow = {
 };
 type Supplier = { id: string; nama: string; kontak: string | null };
 
+const STOK_MENIPIS = 5;
+
 export function ProdukManager({
   produk,
   suppliers,
@@ -40,21 +42,29 @@ export function ProdukManager({
   openNew: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const selectedId = searchParams.get("id");
+
   const [editing, setEditing] = useState<ProdukRow | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [confirmDel, setConfirmDel] = useState<ProdukRow | null>(null);
   const [restocking, setRestocking] = useState<ProdukRow | null>(null);
   const [query, setQuery] = useState("");
+  const [stokFilter, setStokFilter] = useState<"semua" | "menipis">("semua");
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return produk;
-    return produk.filter(
-      (p) =>
-        p.nama.toLowerCase().includes(q) ||
-        p.supplierNama.toLowerCase().includes(q)
-    );
-  }, [produk, query]);
+    return produk.filter((p) => {
+      if (stokFilter === "menipis" && !(p.stok < STOK_MENIPIS)) return false;
+      if (!q) return true;
+      return (
+        p.nama.toLowerCase().includes(q) || p.supplierNama.toLowerCase().includes(q)
+      );
+    });
+  }, [produk, query, stokFilter]);
+
+  const selected = produk.find((p) => p.id === selectedId) ?? null;
 
   useEffect(() => {
     if (openNew) {
@@ -62,6 +72,13 @@ export function ProdukManager({
       setFormOpen(true);
     }
   }, [openNew]);
+
+  function selectRow(id: string) {
+    router.replace(`${pathname}?id=${id}`, { scroll: false });
+  }
+  function clearSelection() {
+    router.replace(pathname, { scroll: false });
+  }
 
   function openAdd() {
     setEditing(null);
@@ -73,77 +90,160 @@ export function ProdukManager({
   }
 
   return (
-    <div className="p-4">
-      <SearchInput
-        value={query}
-        onChange={setQuery}
-        placeholder="Cari nama produk atau supplier…"
-        className="mb-3"
-      />
-      {shown.length === 0 ? (
-        <Card className="text-center text-sm text-muted">
-          {produk.length === 0
-            ? "Belum ada produk. Tambahkan produk pertamamu."
-            : "Tidak ada produk yang cocok."}
-        </Card>
-      ) : (
-        <div className="space-y-2">
-          {shown.map((p) => {
-            const low = p.stok < 5;
-            return (
-              <Card key={p.id} className="flex items-center justify-between gap-3">
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-152px)] lg:flex-row">
+      <div
+        className={cn(
+          "glass-panel flex-col rounded-[20px] lg:flex lg:w-[340px] lg:shrink-0",
+          selected ? "hidden lg:flex" : "flex"
+        )}
+      >
+        <div className="space-y-2 p-3">
+          <div className="flex items-center gap-2">
+            <SearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Cari produk…"
+              className="flex-1"
+            />
+            <button
+              onClick={openAdd}
+              aria-label="Tambah produk"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] bg-gradient-to-br from-glass-accent to-glass-accent2 text-white"
+            >
+              <Plus className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="flex gap-1.5">
+            <FilterPill active={stokFilter === "semua"} onClick={() => setStokFilter("semua")}>
+              Semua
+            </FilterPill>
+            <FilterPill
+              active={stokFilter === "menipis"}
+              onClick={() => setStokFilter("menipis")}
+            >
+              Stok Menipis
+            </FilterPill>
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-1 overflow-y-auto px-2 pb-3 lg:min-h-0">
+          {shown.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-glass-ink-faint">
+              {produk.length === 0
+                ? "Belum ada produk."
+                : "Tidak ada produk yang cocok."}
+            </p>
+          ) : (
+            shown.map((p) => {
+              const low = p.stok < STOK_MENIPIS;
+              const active = p.id === selectedId;
+              return (
                 <button
-                  onClick={() => openEdit(p)}
-                  className="min-w-0 flex-1 text-left"
+                  key={p.id}
+                  onClick={() => selectRow(p.id)}
+                  className={cn(
+                    "flex w-full items-center justify-between gap-2 rounded-[14px] border px-3 py-2.5 text-left transition-colors",
+                    active
+                      ? "border-panel-border bg-panel-strong"
+                      : "border-transparent hover:bg-panel"
+                  )}
                 >
-                  <p className="truncate font-semibold text-ink">{p.nama}</p>
-                  <p className="truncate text-xs text-muted">{p.supplierNama}</p>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
-                    <span className="font-medium text-ink">
-                      Modal {formatRupiah(p.hargaModal)}
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-bold text-glass-ink">
+                      {p.nama}
                     </span>
-                  </div>
-                </button>
-                <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="block text-xs text-glass-ink-dim">
+                      {formatRupiah(p.hargaModal)}
+                    </span>
+                  </span>
                   <span
-                    className={
-                      "rounded-full px-2 py-0.5 text-xs font-bold " +
-                      (low
-                        ? "bg-warning/10 text-warning"
-                        : "bg-secondary text-secondary-foreground")
-                    }
+                    className={cn(
+                      "shrink-0 rounded-full px-2 py-0.5 text-xs font-bold",
+                      low ? "bg-glass-warning/15 text-glass-warning" : "bg-glass-success/15 text-glass-success"
+                    )}
                   >
                     Stok {p.stok}
                   </span>
-                  <button
-                    onClick={() => setRestocking(p)}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Restock
-                  </button>
-                  <button
-                    onClick={() => setConfirmDel(p)}
-                    className="text-xs font-medium text-destructive hover:underline"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </Card>
-            );
-          })}
+                </button>
+              );
+            })
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Floating add button */}
-      <button
-        onClick={openAdd}
-        className="fixed bottom-24 right-4 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 active:scale-95"
-        aria-label="Tambah produk"
+      <div
+        className={cn(
+          "glass-panel flex-1 rounded-[20px]",
+          selected ? "flex flex-col" : "hidden lg:flex lg:items-center lg:justify-center"
+        )}
       >
-        <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <path d="M12 5v14M5 12h14" />
-        </svg>
-      </button>
+        {selected ? (
+          <div className="flex-1 space-y-5 overflow-y-auto p-5 lg:min-h-0">
+            <button
+              onClick={clearSelection}
+              className="flex items-center gap-1 text-sm font-semibold text-glass-accent lg:hidden"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Semua produk
+            </button>
+
+            <div>
+              <h2 className="text-[22px] font-extrabold text-glass-ink">{selected.nama}</h2>
+              <p className="mt-0.5 text-sm text-glass-ink-dim">
+                Supplier: {selected.supplierNama}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-[14px] bg-panel-strong p-3">
+                <p className="text-xs text-glass-ink-dim">Harga Modal</p>
+                <p className="mt-1 text-lg font-bold text-glass-ink">
+                  {formatRupiah(selected.hargaModal)}
+                </p>
+              </div>
+              <div className="rounded-[14px] bg-panel-strong p-3">
+                <p className="text-xs text-glass-ink-dim">Stok</p>
+                <p className="mt-1 text-lg font-bold text-glass-ink">{selected.stok}</p>
+              </div>
+            </div>
+
+            {selected.riwayatRestock.length > 0 && (
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-glass-ink-faint">
+                  Riwayat restock terakhir
+                </p>
+                <ul className="space-y-1.5">
+                  {selected.riwayatRestock.map((r) => (
+                    <li
+                      key={r.id}
+                      className="flex items-center justify-between rounded-[12px] bg-panel px-3 py-2 text-sm text-glass-ink"
+                    >
+                      <span>
+                        +{r.qty} · {formatRupiah(r.hargaBeli)}
+                      </span>
+                      <span className="text-xs text-glass-ink-faint">{r.tanggalLabel}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button variant="outline" onClick={() => openEdit(selected)}>
+                Edit Produk
+              </Button>
+              <Button variant="outline" onClick={() => setRestocking(selected)}>
+                Restock
+              </Button>
+              <Button variant="danger" onClick={() => setConfirmDel(selected)}>
+                Hapus
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="p-5 text-sm text-glass-ink-faint">Pilih produk untuk melihat detail.</p>
+        )}
+      </div>
 
       <ProdukFormModal
         key={editing?.id ?? "new"}
@@ -162,6 +262,7 @@ export function ProdukManager({
         onClose={() => setConfirmDel(null)}
         onDone={() => {
           setConfirmDel(null);
+          if (confirmDel?.id === selectedId) clearSelection();
           router.refresh();
         }}
       />
@@ -176,6 +277,31 @@ export function ProdukManager({
         }}
       />
     </div>
+  );
+}
+
+function FilterPill({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full px-3 py-1.5 text-xs font-semibold transition-colors",
+        active
+          ? "bg-panel-strong text-glass-ink"
+          : "text-glass-ink-faint hover:bg-panel"
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -252,7 +378,7 @@ function ProdukFormModal({
             />
           </div>
         </div>
-        <p className="text-xs text-muted">
+        <p className="text-xs text-glass-ink-faint">
           Harga jual diisi saat membuat pesanan.
         </p>
 
@@ -277,7 +403,7 @@ function ProdukFormModal({
                   setSupplierId("__new__");
                   close();
                 }}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-primary hover:bg-primary/10"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-[15px] font-medium text-glass-accent hover:bg-glass-accent/10"
               >
                 <Plus className="h-4 w-4" />
                 Tambah supplier baru
@@ -287,7 +413,7 @@ function ProdukFormModal({
         </div>
 
         {addingSupplier && (
-          <div className="space-y-3 rounded-xl bg-secondary p-3">
+          <div className="space-y-3 rounded-[14px] bg-panel-strong p-3">
             <div>
               <Label htmlFor="supplierNama">Nama supplier baru</Label>
               <Input
@@ -308,7 +434,7 @@ function ProdukFormModal({
         )}
 
         {error && (
-          <p className="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
             {error}
           </p>
         )}
@@ -357,13 +483,13 @@ function DeleteModal({
 
   return (
     <Modal open={!!row} onClose={onClose} title="Hapus produk?">
-      <p className="text-sm text-muted">
+      <p className="text-sm text-glass-ink-dim">
         Yakin ingin menghapus{" "}
-        <span className="font-semibold text-ink">{row?.nama}</span>? Tindakan ini
+        <span className="font-semibold text-glass-ink">{row?.nama}</span>? Tindakan ini
         tidak bisa dibatalkan.
       </p>
       {error && (
-        <p className="mt-3 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+        <p className="mt-3 rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
           {error}
         </p>
       )}
@@ -439,7 +565,7 @@ function RestockModal({
     >
       {row && (
         <div className="space-y-3">
-          <div className="flex justify-between rounded-xl bg-secondary px-3 py-2 text-sm">
+          <div className="flex justify-between rounded-[14px] bg-panel-strong px-3 py-2 text-sm text-glass-ink">
             <span>Stok saat ini {row.stok}</span>
             <span>HPP saat ini {formatRupiah(row.hargaModal)}</span>
           </div>
@@ -477,13 +603,13 @@ function RestockModal({
           </div>
 
           {preview && (
-            <div className="flex justify-between rounded-xl bg-primary/10 px-3 py-2 text-sm text-primary">
+            <div className="flex justify-between rounded-[14px] bg-glass-accent/10 px-3 py-2 text-sm text-glass-accent">
               <span>Stok baru {preview.stokBaru}</span>
               <span>HPP baru {formatRupiah(preview.hargaModalBaru)}</span>
             </div>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <p className="text-sm text-glass-danger">{error}</p>}
 
           <Button
             type="button"
@@ -495,18 +621,18 @@ function RestockModal({
           </Button>
 
           {row.riwayatRestock.length > 0 && (
-            <div className="space-y-1.5 border-t border-border pt-3">
-              <p className="text-xs font-medium text-muted">Riwayat restock terakhir</p>
+            <div className="space-y-1.5 border-t border-glass-divider pt-3">
+              <p className="text-xs font-medium text-glass-ink-faint">Riwayat restock terakhir</p>
               <ul className="space-y-1.5">
                 {row.riwayatRestock.map((r) => (
                   <li
                     key={r.id}
-                    className="flex items-center justify-between text-sm text-ink"
+                    className="flex items-center justify-between text-sm text-glass-ink"
                   >
                     <span>
                       +{r.qty} · {formatRupiah(r.hargaBeli)}
                     </span>
-                    <span className="text-xs text-muted">{r.tanggalLabel}</span>
+                    <span className="text-xs text-glass-ink-faint">{r.tanggalLabel}</span>
                   </li>
                 ))}
               </ul>

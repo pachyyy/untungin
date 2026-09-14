@@ -27,7 +27,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
       <DialogPrimitive.Portal>
         <DialogPrimitive.Overlay
           className={cn(
-            "fixed inset-0 z-50 bg-black/40",
+            "fixed inset-0 z-50 bg-[var(--glass-scrim)]",
             "data-[state=open]:animate-in data-[state=open]:fade-in-0",
             "data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
           )}
@@ -44,9 +44,9 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
           }}
           className={cn(
             // mobile: bottom sheet
-            "fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[90vh] w-full overflow-y-auto rounded-t-2xl bg-card p-4 text-card-foreground shadow-xl",
+            "fixed inset-x-0 bottom-0 z-50 mx-auto max-h-[90vh] w-full overflow-y-auto rounded-t-[24px] glass-panel-strong glass-shadow-lg p-4 text-glass-ink",
             // desktop: centered dialog
-            "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl",
+            "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[22px]",
             // animations
             "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
             "sm:data-[state=open]:slide-in-from-bottom-0 sm:data-[state=closed]:slide-out-to-bottom-0 sm:data-[state=open]:zoom-in-95 sm:data-[state=closed]:zoom-out-95",
@@ -54,7 +54,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
           )}
         >
           {title ? (
-            <DialogPrimitive.Title className="mb-3 pr-8 text-lg font-bold text-foreground">
+            <DialogPrimitive.Title className="mb-3 pr-8 text-lg font-bold text-glass-ink">
               {title}
             </DialogPrimitive.Title>
           ) : (
@@ -62,7 +62,7 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
           )}
           {children}
           <DialogPrimitive.Close
-            className="absolute right-3 top-3 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="absolute right-3 top-3 rounded-lg p-1 text-glass-ink-faint transition-colors hover:bg-panel-strong hover:text-glass-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-glass-accent/40"
             aria-label="Tutup"
           >
             <X className="h-5 w-5" />

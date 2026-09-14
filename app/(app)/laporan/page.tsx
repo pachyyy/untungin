@@ -1,6 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { Card } from "@/components/ui/Card";
 import { formatRupiah, formatBulanKey } from "@/lib/format";
 import { LaporanChart } from "./LaporanChart";
 import { DateRangeFilter } from "./DateRangeFilter";
@@ -91,65 +89,69 @@ export default async function LaporanPage({
   const totUntung = totOmzet - totModal;
 
   return (
-    <div>
-      <PageHeader title="Laporan" subtitle="Untung dari pesanan lunas" />
-      <div className="space-y-4 p-4">
-        <DateRangeFilter from={fromStr} to={toStr} />
+    <div className="space-y-4">
+      <DateRangeFilter from={fromStr} to={toStr} />
 
-        <div className="grid grid-cols-3 gap-2">
-          <Card className="p-3">
-            <p className="text-[11px] font-medium text-muted">Omzet</p>
-            <p className="mt-1 text-sm font-bold text-ink">
-              {formatRupiah(totOmzet)}
-            </p>
-          </Card>
-          <Card className="p-3">
-            <p className="text-[11px] font-medium text-muted">Modal</p>
-            <p className="mt-1 text-sm font-bold text-ink">
-              {formatRupiah(totModal)}
-            </p>
-          </Card>
-          <Card className="p-3">
-            <p className="text-[11px] font-medium text-muted">Untung</p>
-            <p className="mt-1 text-sm font-bold text-success">
-              {formatRupiah(totUntung)}
-            </p>
-          </Card>
+      <div className="glass-hero rounded-[22px] p-5">
+        <p className="text-[13px] font-semibold text-glass-ink-dim">Untung periode ini</p>
+        <p className="mt-2 text-[38px] font-extrabold leading-none text-glass-ink">
+          {formatRupiah(totUntung)}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3">
+        <div className="glass-panel rounded-[20px] p-3">
+          <p className="text-[11px] font-medium text-glass-ink-dim">Omzet</p>
+          <p className="mt-1 text-sm font-bold text-glass-ink">
+            {formatRupiah(totOmzet)}
+          </p>
         </div>
+        <div className="glass-panel rounded-[20px] p-3">
+          <p className="text-[11px] font-medium text-glass-ink-dim">Modal</p>
+          <p className="mt-1 text-sm font-bold text-glass-ink">
+            {formatRupiah(totModal)}
+          </p>
+        </div>
+        <div className="glass-panel rounded-[20px] p-3">
+          <p className="text-[11px] font-medium text-glass-ink-dim">Untung</p>
+          <p className="mt-1 text-sm font-bold text-glass-success">
+            {formatRupiah(totUntung)}
+          </p>
+        </div>
+      </div>
 
-        <Card>
-          <h2 className="mb-3 font-bold text-ink">Profit per bulan</h2>
-          {chartData.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted">
-              Belum ada data pada rentang ini.
-            </p>
-          ) : (
-            <LaporanChart data={chartData} />
-          )}
-        </Card>
+      <div className="glass-panel rounded-[20px] p-5">
+        <h2 className="mb-3 font-bold text-glass-ink">Profit per bulan</h2>
+        {chartData.length === 0 ? (
+          <p className="py-8 text-center text-sm text-glass-ink-faint">
+            Belum ada data pada rentang ini.
+          </p>
+        ) : (
+          <LaporanChart data={chartData} />
+        )}
+      </div>
 
-        <Card>
-          <h2 className="mb-3 font-bold text-ink">Produk terlaris</h2>
-          {topProduk.length === 0 ? (
-            <p className="py-4 text-center text-sm text-muted">Belum ada data.</p>
-          ) : (
-            <ol className="space-y-2">
-              {topProduk.map((p, i) => (
-                <li key={p.nama} className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                    {i + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 truncate text-ink">
-                    {p.nama}
-                  </span>
-                  <span className="shrink-0 text-sm font-semibold text-muted">
-                    {p.qty} terjual
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </Card>
+      <div className="glass-panel rounded-[20px] p-5">
+        <h2 className="mb-3 font-bold text-glass-ink">Produk terlaris</h2>
+        {topProduk.length === 0 ? (
+          <p className="py-4 text-center text-sm text-glass-ink-faint">Belum ada data.</p>
+        ) : (
+          <ol className="space-y-2">
+            {topProduk.map((p, i) => (
+              <li key={p.nama} className="flex items-center gap-3">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-glass-accent/15 text-xs font-bold text-glass-accent">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-glass-ink">
+                  {p.nama}
+                </span>
+                <span className="shrink-0 text-sm font-semibold text-glass-ink-dim">
+                  {p.qty} terjual
+                </span>
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </div>
   );
