@@ -774,8 +774,8 @@ function PesananFormModal({
                           onChange={(e) =>
                             updateItem(idx, {
                               jumlah: Math.max(
-                                1,
-                                Math.floor(Number(e.target.value) || 1)
+                                0,
+                                Math.floor(Number(e.target.value) || 0)
                               ),
                             })
                           }
