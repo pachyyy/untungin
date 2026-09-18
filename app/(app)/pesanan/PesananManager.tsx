@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/Command";
 import { formatRupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/date";
+import { useToast } from "@/components/ui/Toast";
 import {
   STATUS_LIST,
   STATUS_LABEL,
@@ -488,6 +489,7 @@ function PesananFormModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
+  const { toast } = useToast();
   const [namaCustomer, setNamaCustomer] = useState(editing?.namaCustomer ?? "");
   const [noHp, setNoHp] = useState(editing?.noHp ?? "");
   const [items, setItems] = useState<DraftItem[]>(() =>
@@ -670,8 +672,10 @@ function PesananFormModal({
       const res = editing
         ? await updatePesanan(formData)
         : await createPesanan(formData);
-      if (res.ok) onDone();
-      else setError(res.error);
+      if (res.ok) {
+        toast(editing ? "Pesanan berhasil diperbarui." : "Pesanan berhasil ditambahkan.");
+        onDone();
+      } else setError(res.error);
     });
   }
 
@@ -1127,6 +1131,7 @@ function PaymentModal({
   onChanged: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const { toast } = useToast();
   const total = row ? totalPesanan(row) : 0;
   const dibayar = row ? row.pembayaran.reduce((s, b) => s + b.jumlah, 0) : 0;
   const sisa = Math.max(0, total - dibayar);
@@ -1152,6 +1157,7 @@ function PaymentModal({
     startTransition(async () => {
       const res = await tambahPembayaran(fd);
       if (res.ok) {
+        toast("Pembayaran berhasil ditambahkan.");
         setJumlah("");
         onChanged();
       } else setError(res.error);
@@ -1163,8 +1169,10 @@ function PaymentModal({
     fd.set("id", id);
     startTransition(async () => {
       const res = await hapusPembayaran(fd);
-      if (res.ok) onChanged();
-      else alert(res.error);
+      if (res.ok) {
+        toast("Pembayaran berhasil dihapus.");
+        onChanged();
+      } else toast(res.error ?? "Gagal menghapus pembayaran.", "error");
     });
   }
 
@@ -1184,8 +1192,10 @@ function PaymentModal({
     fd.set("pesananId", row.id);
     startTransition(async () => {
       const res = await tandaiLunas(fd);
-      if (res.ok) onChanged();
-      else alert(res.error);
+      if (res.ok) {
+        toast("Pesanan ditandai lunas.");
+        onChanged();
+      } else toast(res.error ?? "Gagal menandai lunas.", "error");
     });
   }
 
@@ -1312,6 +1322,7 @@ function DeleteModal({
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const { toast } = useToast();
 
   function handleDelete() {
     if (!row) return;
@@ -1319,8 +1330,10 @@ function DeleteModal({
     fd.set("id", row.id);
     startTransition(async () => {
       const res = await deletePesanan(fd);
-      if (res.ok) onDone();
-      else alert(res.error);
+      if (res.ok) {
+        toast("Pesanan berhasil dihapus.");
+        onDone();
+      } else toast(res.error ?? "Gagal menghapus pesanan.", "error");
     });
   }
 

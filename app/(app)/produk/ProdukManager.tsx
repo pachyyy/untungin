@@ -8,6 +8,7 @@ import { Input, Label } from "@/components/ui/Input";
 import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { useToast } from "@/components/ui/Toast";
 import { formatRupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -323,6 +324,7 @@ function ProdukFormModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
+  const { toast } = useToast();
   const [supplierId, setSupplierId] = useState(
     editing?.supplierId ?? suppliers[0]?.id ?? "__new__"
   );
@@ -335,8 +337,10 @@ function ProdukFormModal({
       const res = editing
         ? await updateProduk(formData)
         : await createProduk(formData);
-      if (res.ok) onDone();
-      else setError(res.error);
+      if (res.ok) {
+        toast(editing ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.");
+        onDone();
+      } else setError(res.error);
     });
   }
 
@@ -471,6 +475,7 @@ function DeleteModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
+  const { toast } = useToast();
 
   function handleDelete() {
     if (!row) return;
@@ -479,8 +484,10 @@ function DeleteModal({
     fd.set("id", row.id);
     startTransition(async () => {
       const res = await deleteProduk(fd);
-      if (res.ok) onDone();
-      else setError(res.error);
+      if (res.ok) {
+        toast("Produk berhasil dihapus.");
+        onDone();
+      } else setError(res.error);
     });
   }
 
@@ -523,6 +530,7 @@ function RestockModal({
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const { toast } = useToast();
   const [tanggal, setTanggal] = useState(todayJakarta);
   const [qty, setQty] = useState("");
   const [hargaBeli, setHargaBeli] = useState(() => String(row?.hargaModal ?? ""));
@@ -555,8 +563,10 @@ function RestockModal({
     fd.set("tanggal", tanggal);
     startTransition(async () => {
       const res = await restockProduk(fd);
-      if (res.ok) onDone();
-      else setError(res.error);
+      if (res.ok) {
+        toast("Restock berhasil disimpan.");
+        onDone();
+      } else setError(res.error);
     });
   }
 

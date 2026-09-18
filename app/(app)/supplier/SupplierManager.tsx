@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
+import { useToast } from "@/components/ui/Toast";
 import { formatRupiah } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import {
@@ -236,6 +237,7 @@ function FormModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
+  const { toast } = useToast();
 
   function handleSubmit(formData: FormData) {
     setError(undefined);
@@ -243,8 +245,10 @@ function FormModal({
       const res = editing
         ? await updateSupplier(formData)
         : await createSupplier(formData);
-      if (res.ok) onDone();
-      else setError(res.error);
+      if (res.ok) {
+        toast(editing ? "Supplier berhasil diperbarui." : "Supplier berhasil ditambahkan.");
+        onDone();
+      } else setError(res.error);
     });
   }
 
@@ -305,6 +309,7 @@ function DeleteModal({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
+  const { toast } = useToast();
 
   function handleDelete() {
     if (!row) return;
@@ -313,8 +318,10 @@ function DeleteModal({
     fd.set("id", row.id);
     startTransition(async () => {
       const res = await deleteSupplier(fd);
-      if (res.ok) onDone();
-      else setError(res.error);
+      if (res.ok) {
+        toast("Supplier berhasil dihapus.");
+        onDone();
+      } else setError(res.error);
     });
   }
 

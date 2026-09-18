@@ -103,6 +103,27 @@ function revalidateAll() {
   revalidatePath("/pelanggan");
 }
 
+/**
+ * Thrown from inside the $transaction when a guarded stock decrement affects
+ * zero rows — i.e. another request consumed the stock between our pre-check
+ * (outside the transaction, done only for a fast, friendly error message)
+ * and the actual write. Caught by the caller to re-check the real current
+ * stock and return a fresh "sisa N" message.
+ */
+class StokTidakCukupError extends Error {
+  constructor(public readonly produkId: string) {
+    super("Stok tidak cukup");
+  }
+}
+
+async function stokTidakCukupMessage(produkId: string): Promise<string> {
+  const p = await prisma.produk.findUnique({
+    where: { id: produkId },
+    select: { stok: true },
+  });
+  return `Stok tidak cukup untuk salah satu produk (sisa ${p?.stok ?? 0}).`;
+}
+
 export async function createPesanan(formData: FormData): Promise<ActionResult> {
   const namaCustomer = String(formData.get("namaCustomer") ?? "").trim();
   const noHp = String(formData.get("noHp") ?? "").trim();
@@ -143,51 +164,62 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
       };
   }
 
-  await prisma.$transaction(async (tx) => {
-    const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
-    await tx.pesanan.create({
-      data: {
-        namaCustomer,
-        noHp: noHp || null,
-        customerId,
-        status: "belum_bayar",
-        items: {
-          create: items.map((it) => ({
-            produkId: it.produkId,
-            namaManual: it.namaManual,
-            jumlah: it.jumlah,
-            hargaSaat: it.hargaSaat, // selling price entered per order
-            // cost snapshot: from the product for a stock item, or the typed
-            // HPP for a dropship item.
-            modalSaat: it.produkId
-              ? produkById.get(it.produkId)!.hargaModal
-              : it.modalManual,
-          })),
+  try {
+    await prisma.$transaction(async (tx) => {
+      const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
+      await tx.pesanan.create({
+        data: {
+          namaCustomer,
+          noHp: noHp || null,
+          customerId,
+          status: "belum_bayar",
+          items: {
+            create: items.map((it) => ({
+              produkId: it.produkId,
+              namaManual: it.namaManual,
+              jumlah: it.jumlah,
+              hargaSaat: it.hargaSaat, // selling price entered per order
+              // cost snapshot: from the product for a stock item, or the typed
+              // HPP for a dropship item.
+              modalSaat: it.produkId
+                ? produkById.get(it.produkId)!.hargaModal
+                : it.modalManual,
+            })),
+          },
+          pakets: {
+            create: pakets.map((pk) => ({
+              nama: pk.nama,
+              harga: pk.harga,
+              komponen: {
+                create: pk.komponen.map((k) => ({
+                  produkId: k.produkId,
+                  pcs: k.pcs,
+                  modalSaat: produkById.get(k.produkId)!.hargaModal,
+                })),
+              },
+            })),
+          },
         },
-        pakets: {
-          create: pakets.map((pk) => ({
-            nama: pk.nama,
-            harga: pk.harga,
-            komponen: {
-              create: pk.komponen.map((k) => ({
-                produkId: k.produkId,
-                pcs: k.pcs,
-                modalSaat: produkById.get(k.produkId)!.hargaModal,
-              })),
-            },
-          })),
-        },
-      },
-    });
-
-    // Stock leaves the moment the order is placed — status is now purely financial.
-    for (const [produkId, qty] of needs) {
-      await tx.produk.update({
-        where: { id: produkId },
-        data: { stok: { decrement: qty } },
       });
+
+      // Stock leaves the moment the order is placed — status is now purely
+      // financial. The pre-check above is only a fast, friendly-message
+      // fast-path; this guarded update is the real safeguard against two
+      // concurrent orders both passing that check and driving stock negative.
+      for (const [produkId, qty] of needs) {
+        const res = await tx.produk.updateMany({
+          where: { id: produkId, stok: { gte: qty } },
+          data: { stok: { decrement: qty } },
+        });
+        if (res.count === 0) throw new StokTidakCukupError(produkId);
+      }
+    });
+  } catch (e) {
+    if (e instanceof StokTidakCukupError) {
+      return { ok: false, error: await stokTidakCukupMessage(e.produkId) };
     }
-  });
+    throw e;
+  }
 
   revalidateAll();
   return { ok: true };
@@ -257,68 +289,87 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
 
   const totalDibayar = existing.pembayaran.reduce((s, p) => s + p.jumlah, 0);
 
-  await prisma.$transaction(async (tx) => {
-    const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
+  try {
+    await prisma.$transaction(async (tx) => {
+      const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
 
-    // Replace all lines.
-    await tx.pesananItem.deleteMany({ where: { pesananId: id } });
-    await tx.pesananPaket.deleteMany({ where: { pesananId: id } }); // cascades komponen
-    await tx.pesanan.update({
-      where: { id },
-      data: {
-        namaCustomer,
-        noHp: noHp || null,
-        customerId,
-        items: {
-          create: items.map((it) => ({
-            produkId: it.produkId,
-            namaManual: it.namaManual,
-            jumlah: it.jumlah,
-            hargaSaat: it.hargaSaat,
-            modalSaat: it.produkId
-              ? produkById.get(it.produkId)!.hargaModal
-              : it.modalManual,
-          })),
+      // Replace all lines.
+      await tx.pesananItem.deleteMany({ where: { pesananId: id } });
+      await tx.pesananPaket.deleteMany({ where: { pesananId: id } }); // cascades komponen
+      await tx.pesanan.update({
+        where: { id },
+        data: {
+          namaCustomer,
+          noHp: noHp || null,
+          customerId,
+          items: {
+            create: items.map((it) => ({
+              produkId: it.produkId,
+              namaManual: it.namaManual,
+              jumlah: it.jumlah,
+              hargaSaat: it.hargaSaat,
+              modalSaat: it.produkId
+                ? produkById.get(it.produkId)!.hargaModal
+                : it.modalManual,
+            })),
+          },
+          pakets: {
+            create: pakets.map((pk) => ({
+              nama: pk.nama,
+              harga: pk.harga,
+              komponen: {
+                create: pk.komponen.map((k) => ({
+                  produkId: k.produkId,
+                  pcs: k.pcs,
+                  modalSaat: produkById.get(k.produkId)!.hargaModal,
+                })),
+              },
+            })),
+          },
         },
-        pakets: {
-          create: pakets.map((pk) => ({
-            nama: pk.nama,
-            harga: pk.harga,
-            komponen: {
-              create: pk.komponen.map((k) => ({
-                produkId: k.produkId,
-                pcs: k.pcs,
-                modalSaat: produkById.get(k.produkId)!.hargaModal,
-              })),
-            },
-          })),
-        },
-      },
-    });
+      });
 
-    // Reconcile stock deltas: return old, deduct new.
-    for (const pid of products) {
-      const net = (oldNeeds.get(pid) ?? 0) - (newNeeds.get(pid) ?? 0);
-      if (net !== 0) {
-        await tx.produk.update({
-          where: { id: pid },
-          data: { stok: { increment: net } },
-        });
+      // Reconcile stock deltas: return excess first (always safe — never
+      // fails), then guard the deductions against a concurrent order having
+      // eaten into stock since the pre-check above. Doing returns first
+      // means an edit that shifts a product's own excess back before this
+      // same product needs more never sees a spurious shortfall.
+      for (const pid of products) {
+        const net = (oldNeeds.get(pid) ?? 0) - (newNeeds.get(pid) ?? 0);
+        if (net > 0) {
+          await tx.produk.update({ where: { id: pid }, data: { stok: { increment: net } } });
+        }
       }
-    }
+      for (const pid of products) {
+        const net = (oldNeeds.get(pid) ?? 0) - (newNeeds.get(pid) ?? 0);
+        if (net < 0) {
+          const butuh = -net;
+          const res = await tx.produk.updateMany({
+            where: { id: pid, stok: { gte: butuh } },
+            data: { stok: { decrement: butuh } },
+          });
+          if (res.count === 0) throw new StokTidakCukupError(pid);
+        }
+      }
 
-    // The sale price may have changed — re-derive status from what's already
-    // been paid (never auto-forces Lunas back up; that stays a manual choice
-    // via tandaiLunas, but a status can drop if the new total exceeds what
-    // was paid).
-    const newTotal = items.reduce((s, it) => s + it.hargaSaat * it.jumlah, 0) +
-      pakets.reduce((s, pk) => s + pk.harga, 0);
-    const newStatus =
-      totalDibayar <= 0 ? "belum_bayar" : totalDibayar >= newTotal ? "lunas" : "nyicil";
-    if (newStatus !== existing.status) {
-      await tx.pesanan.update({ where: { id }, data: { status: newStatus } });
+      // The sale price may have changed — re-derive status from what's already
+      // been paid (never auto-forces Lunas back up; that stays a manual choice
+      // via tandaiLunas, but a status can drop if the new total exceeds what
+      // was paid).
+      const newTotal = items.reduce((s, it) => s + it.hargaSaat * it.jumlah, 0) +
+        pakets.reduce((s, pk) => s + pk.harga, 0);
+      const newStatus =
+        totalDibayar <= 0 ? "belum_bayar" : totalDibayar >= newTotal ? "lunas" : "nyicil";
+      if (newStatus !== existing.status) {
+        await tx.pesanan.update({ where: { id }, data: { status: newStatus } });
+      }
+    });
+  } catch (e) {
+    if (e instanceof StokTidakCukupError) {
+      return { ok: false, error: await stokTidakCukupMessage(e.produkId) };
     }
-  });
+    throw e;
+  }
 
   revalidateAll();
   return { ok: true };
