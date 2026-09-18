@@ -29,7 +29,13 @@ import {
   untungPesanan,
   type Status,
 } from "@/lib/calc";
-import { ChevronLeft, Pencil, Plus } from "lucide-react";
+import {
+  ArrowDownWideNarrow,
+  ArrowUpWideNarrow,
+  ChevronLeft,
+  Pencil,
+  Plus,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createPesanan, updatePesanan, deletePesanan } from "@/lib/actions/pesanan";
 import {
@@ -73,6 +79,7 @@ type PesananRow = {
   noHp: string | null;
   status: string;
   tanggal: string;
+  createdAtIso: string;
   items: ItemRow[];
   pakets: PaketRow[];
   pembayaran: PembayaranRow[];
@@ -81,6 +88,10 @@ type ProdukOpt = { id: string; nama: string; stok: number };
 type CustomerOpt = { id: string; nama: string; noHp: string | null };
 
 const FILTERS = ["semua", ...STATUS_LIST] as const;
+// belum_bayar → nyicil → lunas — STATUS_LIST is already in that priority order.
+const STATUS_PRIORITY: Record<string, number> = Object.fromEntries(
+  STATUS_LIST.map((s, i) => [s, i])
+);
 // A payment's metode isn't constrained to this list server-side — an older
 // or hand-entered value can fall outside it and still displays fine, it just
 // won't be one of the selectable options going forward.
@@ -104,6 +115,7 @@ export function PesananManager({
 
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("semua");
   const [query, setQuery] = useState("");
+  const [dateSort, setDateSort] = useState<"desc" | "asc">("desc");
   const [formOpen, setFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<PesananRow | null>(null);
   const [confirmDel, setConfirmDel] = useState<PesananRow | null>(null);
@@ -142,20 +154,28 @@ export function PesananManager({
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return pesanan.filter((p) => {
-      if (filter !== "semua" && p.status !== filter) return false;
-      if (!q) return true;
-      const namaMatch = p.namaCustomer.toLowerCase().includes(q);
-      const hpMatch = (p.noHp ?? "").toLowerCase().includes(q);
-      const itemMatch = p.items.some((it) => it.nama.toLowerCase().includes(q));
-      const paketMatch = p.pakets.some(
-        (pk) =>
-          pk.nama.toLowerCase().includes(q) ||
-          pk.komponen.some((k) => k.nama.toLowerCase().includes(q))
-      );
-      return namaMatch || hpMatch || itemMatch || paketMatch;
-    });
-  }, [filter, query, pesanan]);
+    return pesanan
+      .filter((p) => {
+        if (filter !== "semua" && p.status !== filter) return false;
+        if (!q) return true;
+        const namaMatch = p.namaCustomer.toLowerCase().includes(q);
+        const hpMatch = (p.noHp ?? "").toLowerCase().includes(q);
+        const itemMatch = p.items.some((it) => it.nama.toLowerCase().includes(q));
+        const paketMatch = p.pakets.some(
+          (pk) =>
+            pk.nama.toLowerCase().includes(q) ||
+            pk.komponen.some((k) => k.nama.toLowerCase().includes(q))
+        );
+        return namaMatch || hpMatch || itemMatch || paketMatch;
+      })
+      .sort((a, b) => {
+        const pa = STATUS_PRIORITY[a.status] ?? STATUS_LIST.length;
+        const pb = STATUS_PRIORITY[b.status] ?? STATUS_LIST.length;
+        if (pa !== pb) return pa - pb;
+        const cmp = a.createdAtIso.localeCompare(b.createdAtIso);
+        return dateSort === "asc" ? cmp : -cmp;
+      });
+  }, [filter, query, pesanan, dateSort]);
 
   const selected = pesanan.find((p) => p.id === selectedId) ?? null;
 
@@ -175,6 +195,20 @@ export function PesananManager({
               placeholder="Cari customer atau produk…"
               className="flex-1"
             />
+            <button
+              onClick={() => setDateSort((s) => (s === "desc" ? "asc" : "desc"))}
+              aria-label={
+                dateSort === "desc" ? "Urutkan tanggal terlama" : "Urutkan tanggal terbaru"
+              }
+              title={dateSort === "desc" ? "Terbaru dulu" : "Terlama dulu"}
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] border border-panel-border text-glass-ink-faint transition-colors hover:bg-panel"
+            >
+              {dateSort === "desc" ? (
+                <ArrowDownWideNarrow className="h-[18px] w-[18px]" />
+              ) : (
+                <ArrowUpWideNarrow className="h-[18px] w-[18px]" />
+              )}
+            </button>
             <button
               onClick={openNewForm}
               aria-label="Tambah pesanan"

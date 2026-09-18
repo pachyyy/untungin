@@ -36,13 +36,13 @@ export function Sidebar() {
               >
                 <span
                   className={cn(
-                    "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] text-[11px] font-bold",
+                    "flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px]",
                     active
                       ? "bg-gradient-to-br from-glass-accent to-glass-accent2 text-white"
                       : "bg-panel-strong text-glass-ink-faint"
                   )}
                 >
-                  {item.monogram}
+                  <item.icon className="h-4 w-4" strokeWidth={active ? 2.5 : 2} />
                 </span>
                 {item.label}
               </Link>

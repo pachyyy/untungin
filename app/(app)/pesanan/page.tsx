@@ -49,6 +49,7 @@ export default async function PesananPage({
         noHp: p.noHp,
         status: p.status,
         tanggal: formatTanggal(p.createdAt),
+        createdAtIso: p.createdAt.toISOString(),
         items: p.items.map((it) => ({
           id: it.id,
           produkId: it.produkId,

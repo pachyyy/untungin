@@ -20,13 +20,13 @@ export function BottomNav() {
             >
               <span
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-[9px] text-[10px] font-bold transition-colors",
+                  "flex h-7 w-7 items-center justify-center rounded-[9px] transition-colors",
                   active
                     ? "bg-gradient-to-br from-glass-accent to-glass-accent2 text-white"
                     : "bg-panel text-glass-ink-faint"
                 )}
               >
-                {item.monogram}
+                <item.icon className="h-4 w-4" strokeWidth={active ? 2.5 : 2} />
               </span>
               <span
                 className={cn(
