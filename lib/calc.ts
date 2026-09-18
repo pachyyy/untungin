@@ -17,6 +17,8 @@ type ItemLike = { jumlah: number; hargaSaat: number; modalSaat: number };
 type PaketKomponenLike = { pcs: number; modalSaat: number };
 type PaketLike = { harga: number; komponen: PaketKomponenLike[] };
 type PesananLike = { items: ItemLike[]; pakets?: PaketLike[] };
+type PembayaranLike = { jumlah: number };
+type PesananWithPembayaranLike = PesananLike & { pembayaran: PembayaranLike[] };
 
 /** Modal cost of a paket = sum(komponen.pcs * modalSaat). */
 export function modalPaket(paket: PaketLike): number {
@@ -57,4 +59,20 @@ export function untungPesanan(p: PesananLike): number {
     0
   );
   return items + pakets;
+}
+
+/** Sum of payments actually received against an order (not the asking price). */
+export function totalDibayar(p: PesananWithPembayaranLike): number {
+  return p.pembayaran.reduce((s, b) => s + b.jumlah, 0);
+}
+
+/**
+ * Realized profit: money actually received minus the snapshotted cost of
+ * what was sold. Unlike untungPesanan(), this reflects a discount/write-off
+ * (tandaiLunas on an underpaid order — realized profit is lower than the
+ * asking-price estimate) or an overpayment (realized profit is higher). Can
+ * be negative. This is what the dashboard and laporan report as profit.
+ */
+export function untungRealisasi(p: PesananWithPembayaranLike): number {
+  return totalDibayar(p) - modalPesanan(p);
 }

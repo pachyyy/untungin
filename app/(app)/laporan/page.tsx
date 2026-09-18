@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { formatRupiah, formatBulanKey } from "@/lib/format";
 import { monthStartJakarta, monthKeyJakarta, toDateOnlyJakarta, parseDateOnlyJakarta } from "@/lib/date";
+import { totalDibayar, modalPesanan } from "@/lib/calc";
 import { LaporanChart } from "./LaporanChart";
 import { DateRangeFilter } from "./DateRangeFilter";
 
@@ -30,12 +31,17 @@ export default async function LaporanPage({
           komponen: { include: { produk: { select: { nama: true } } } },
         },
       },
+      pembayaran: true,
     },
   });
 
   const realized = pesanan.filter((p) => p.status === "lunas");
 
-  // Monthly aggregation
+  // Monthly aggregation. Omzet/modal/untung are order-level (money actually
+  // received minus snapshotted cost — see lib/calc's totalDibayar/
+  // modalPesanan), since a discount or overpayment can't be decomposed back
+  // onto individual line items. Best-seller qty is unaffected by that and
+  // still comes from the per-item/per-komponen loop below.
   const monthly = new Map<string, { omzet: number; modal: number; untung: number }>();
   let totOmzet = 0;
   let totModal = 0;
@@ -44,29 +50,24 @@ export default async function LaporanPage({
   for (const p of realized) {
     const key = monthKeyJakarta(p.createdAt);
     const bucket = monthly.get(key) ?? { omzet: 0, modal: 0, untung: 0 };
-    const addSale = (omzet: number, modal: number) => {
-      bucket.omzet += omzet;
-      bucket.modal += modal;
-      bucket.untung += omzet - modal;
-      totOmzet += omzet;
-      totModal += modal;
-    };
+
+    const omzet = totalDibayar(p);
+    const modal = modalPesanan(p);
+    bucket.omzet += omzet;
+    bucket.modal += modal;
+    bucket.untung += omzet - modal;
+    totOmzet += omzet;
+    totModal += modal;
+    monthly.set(key, bucket);
+
     const addQty = (nama: string, qty: number) => {
       const bs = bestSeller.get(nama) ?? { nama, qty: 0 };
       bs.qty += qty;
       bestSeller.set(nama, bs);
     };
-
-    for (const it of p.items) {
-      addSale(it.hargaSaat * it.jumlah, it.modalSaat * it.jumlah);
-      addQty(it.produk?.nama ?? it.namaManual ?? "", it.jumlah);
-    }
-    for (const pk of p.pakets) {
-      const modal = pk.komponen.reduce((s, k) => s + k.modalSaat * k.pcs, 0);
-      addSale(pk.harga, modal);
+    for (const it of p.items) addQty(it.produk?.nama ?? it.namaManual ?? "", it.jumlah);
+    for (const pk of p.pakets)
       for (const k of pk.komponen) addQty(k.produk.nama, k.pcs);
-    }
-    monthly.set(key, bucket);
   }
 
   const chartData = Array.from(monthly.entries())
