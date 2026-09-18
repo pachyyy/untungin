@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { formatTanggal } from "@/lib/format";
+import { toDateOnlyJakarta } from "@/lib/date";
 import { PesananManager } from "./PesananManager";
 
 export const dynamic = "force-dynamic";
@@ -72,7 +73,7 @@ export default async function PesananPage({
         })),
         pembayaran: p.pembayaran.map((b) => ({
           id: b.id,
-          tanggal: b.tanggal.toISOString().slice(0, 10),
+          tanggal: toDateOnlyJakarta(b.tanggal),
           tanggalLabel: formatTanggal(b.tanggal),
           metode: b.metode,
           jumlah: b.jumlah,

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { parseIntField } from "@/lib/parse";
+import { parseDateOnlyJakarta } from "@/lib/date";
 
 function revalidateAll() {
   revalidatePath("/produk");
@@ -26,7 +27,7 @@ export async function restockProduk(formData: FormData): Promise<ActionResult> {
   if (qty === null) return { ok: false, error: "Jumlah masuk harus lebih dari 0." };
   if (hargaBeli === null) return { ok: false, error: "Harga beli harus lebih dari 0." };
 
-  const tanggal = tanggalStr ? new Date(tanggalStr) : new Date();
+  const tanggal = tanggalStr ? parseDateOnlyJakarta(tanggalStr, "start") : new Date();
   if (Number.isNaN(tanggal.getTime())) return { ok: false, error: "Tanggal tidak valid." };
 
   const produk = await prisma.produk.findUnique({

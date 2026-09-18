@@ -9,6 +9,7 @@ import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { formatRupiah } from "@/lib/format";
+import { todayJakarta } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { createProduk, updateProduk, deleteProduk } from "@/lib/actions/produk";
 import { restockProduk } from "@/lib/actions/restock";
@@ -522,7 +523,7 @@ function RestockModal({
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
+  const [tanggal, setTanggal] = useState(todayJakarta);
   const [qty, setQty] = useState("");
   const [hargaBeli, setHargaBeli] = useState(() => String(row?.hargaModal ?? ""));
   const [error, setError] = useState<string>();

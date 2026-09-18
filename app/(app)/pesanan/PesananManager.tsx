@@ -21,6 +21,7 @@ import {
   CommandList,
 } from "@/components/ui/Command";
 import { formatRupiah } from "@/lib/format";
+import { todayJakarta } from "@/lib/date";
 import {
   STATUS_LIST,
   STATUS_LABEL,
@@ -1130,7 +1131,7 @@ function PaymentModal({
   const dibayar = row ? row.pembayaran.reduce((s, b) => s + b.jumlah, 0) : 0;
   const sisa = Math.max(0, total - dibayar);
 
-  const [tanggal, setTanggal] = useState(() => new Date().toISOString().slice(0, 10));
+  const [tanggal, setTanggal] = useState(todayJakarta);
   const [metode, setMetode] = useState("");
   const [jumlah, setJumlah] = useState(() => String(sisa || ""));
   const [error, setError] = useState<string>();

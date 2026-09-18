@@ -2,15 +2,14 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatRupiah } from "@/lib/format";
 import { totalPesanan, untungPesanan } from "@/lib/calc";
+import { monthRangeJakarta } from "@/lib/date";
 
 export const dynamic = "force-dynamic";
 
 const STOK_MENIPIS = 5;
 
 export default async function DashboardPage() {
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const { start: monthStart, end: monthEnd } = monthRangeJakarta(new Date());
 
   const [pesananBulanIni, pendingPesanan, stokMenipis, semuaProduk] = await Promise.all([
     prisma.pesanan.findMany({

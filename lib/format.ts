@@ -1,3 +1,5 @@
+import { jakartaParts } from "@/lib/date";
+
 /** Format an integer amount of Rupiah with thousands separators, e.g. 150000 -> "Rp 150.000". */
 export function formatRupiah(value: number): string {
   const rounded = Math.round(value || 0);
@@ -29,9 +31,10 @@ const BULAN = [
   "Des",
 ];
 
-/** e.g. "12 Jul 2026" */
+/** e.g. "12 Jul 2026" — always in Jakarta local date, regardless of server/browser TZ. */
 export function formatTanggal(date: Date): string {
-  return `${date.getDate()} ${BULAN[date.getMonth()]} ${date.getFullYear()}`;
+  const { day, month, year } = jakartaParts(date);
+  return `${day} ${BULAN[month - 1]} ${year}`;
 }
 
 /** e.g. "Jul 2026" for a "2026-07" key */

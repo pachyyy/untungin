@@ -1,13 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { formatRupiah, formatBulanKey } from "@/lib/format";
+import { monthStartJakarta, monthKeyJakarta, toDateOnlyJakarta, parseDateOnlyJakarta } from "@/lib/date";
 import { LaporanChart } from "./LaporanChart";
 import { DateRangeFilter } from "./DateRangeFilter";
 
 export const dynamic = "force-dynamic";
-
-function toDateOnly(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
 
 export default async function LaporanPage({
   searchParams,
@@ -17,12 +14,12 @@ export default async function LaporanPage({
   const sp = await searchParams;
 
   const now = new Date();
-  const defaultFrom = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-  const fromStr = sp.from || toDateOnly(defaultFrom);
-  const toStr = sp.to || toDateOnly(now);
+  const defaultFrom = monthStartJakarta(now, 5);
+  const fromStr = sp.from || toDateOnlyJakarta(defaultFrom);
+  const toStr = sp.to || toDateOnlyJakarta(now);
 
-  const from = new Date(fromStr + "T00:00:00");
-  const to = new Date(toStr + "T23:59:59");
+  const from = parseDateOnlyJakarta(fromStr, "start");
+  const to = parseDateOnlyJakarta(toStr, "end");
 
   const pesanan = await prisma.pesanan.findMany({
     where: { createdAt: { gte: from, lte: to } },
@@ -45,9 +42,7 @@ export default async function LaporanPage({
   const bestSeller = new Map<string, { nama: string; qty: number }>();
 
   for (const p of realized) {
-    const key = `${p.createdAt.getFullYear()}-${String(
-      p.createdAt.getMonth() + 1
-    ).padStart(2, "0")}`;
+    const key = monthKeyJakarta(p.createdAt);
     const bucket = monthly.get(key) ?? { omzet: 0, modal: 0, untung: 0 };
     const addSale = (omzet: number, modal: number) => {
       bucket.omzet += omzet;

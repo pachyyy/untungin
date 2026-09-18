@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { totalPesanan } from "@/lib/calc";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { parseIntField } from "@/lib/parse";
+import { parseDateOnlyJakarta } from "@/lib/date";
 
 /**
  * Derives status from payments-so-far and updates it if changed.
@@ -55,7 +56,7 @@ export async function tambahPembayaran(formData: FormData): Promise<ActionResult
   if (!pesananId) return { ok: false, error: "Pesanan tidak ditemukan." };
   if (jumlah === null) return { ok: false, error: "Jumlah pembayaran harus lebih dari 0." };
 
-  const tanggal = tanggalStr ? new Date(tanggalStr) : new Date();
+  const tanggal = tanggalStr ? parseDateOnlyJakarta(tanggalStr, "start") : new Date();
   if (Number.isNaN(tanggal.getTime()))
     return { ok: false, error: "Tanggal tidak valid." };
 

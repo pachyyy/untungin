@@ -2,28 +2,26 @@
 
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-
-function toDateOnly(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { toDateOnlyJakarta, monthStartJakarta, jakartaParts } from "@/lib/date";
 
 function presetRange(preset: "bulan" | "3bulan" | "tahun") {
   const now = new Date();
   if (preset === "bulan") {
     return {
-      from: toDateOnly(new Date(now.getFullYear(), now.getMonth(), 1)),
-      to: toDateOnly(now),
+      from: toDateOnlyJakarta(monthStartJakarta(now, 0)),
+      to: toDateOnlyJakarta(now),
     };
   }
   if (preset === "3bulan") {
     return {
-      from: toDateOnly(new Date(now.getFullYear(), now.getMonth() - 2, 1)),
-      to: toDateOnly(now),
+      from: toDateOnlyJakarta(monthStartJakarta(now, 2)),
+      to: toDateOnlyJakarta(now),
     };
   }
+  const { year } = jakartaParts(now);
   return {
-    from: toDateOnly(new Date(now.getFullYear(), 0, 1)),
-    to: toDateOnly(now),
+    from: `${year}-01-01`,
+    to: toDateOnlyJakarta(now),
   };
 }
 
