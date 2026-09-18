@@ -3,12 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
-
-function parsePositiveInt(value: FormDataEntryValue | null): number | null {
-  const n = Number(String(value ?? "").replace(/[^0-9]/g, ""));
-  if (!Number.isFinite(n) || n < 0) return null;
-  return Math.floor(n);
-}
+import { parseIntField } from "@/lib/parse";
 
 async function resolveSupplierId(formData: FormData): Promise<string | { error: string }> {
   const supplierId = String(formData.get("supplierId") ?? "").trim();
@@ -28,11 +23,11 @@ async function resolveSupplierId(formData: FormData): Promise<string | { error: 
 
 export async function createProduk(formData: FormData): Promise<ActionResult> {
   const nama = String(formData.get("nama") ?? "").trim();
-  const hargaModal = parsePositiveInt(formData.get("hargaModal"));
-  const stok = parsePositiveInt(formData.get("stok")) ?? 0;
+  const hargaModal = parseIntField(formData.get("hargaModal"));
+  const stok = parseIntField(formData.get("stok"), { min: 0 }) ?? 0;
 
   if (!nama) return { ok: false, error: "Nama produk wajib diisi." };
-  if (hargaModal === null || hargaModal <= 0)
+  if (hargaModal === null)
     return { ok: false, error: "Harga modal harus angka lebih dari 0." };
 
   const supplier = await resolveSupplierId(formData);
@@ -50,12 +45,12 @@ export async function createProduk(formData: FormData): Promise<ActionResult> {
 export async function updateProduk(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
   const nama = String(formData.get("nama") ?? "").trim();
-  const hargaModal = parsePositiveInt(formData.get("hargaModal"));
-  const stok = parsePositiveInt(formData.get("stok")) ?? 0;
+  const hargaModal = parseIntField(formData.get("hargaModal"));
+  const stok = parseIntField(formData.get("stok"), { min: 0 }) ?? 0;
 
   if (!id) return { ok: false, error: "Produk tidak ditemukan." };
   if (!nama) return { ok: false, error: "Nama produk wajib diisi." };
-  if (hargaModal === null || hargaModal <= 0)
+  if (hargaModal === null)
     return { ok: false, error: "Harga modal harus angka lebih dari 0." };
 
   const supplier = await resolveSupplierId(formData);

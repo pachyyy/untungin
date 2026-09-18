@@ -38,9 +38,12 @@ export function totalPesanan(p: PesananLike): number {
 }
 
 /**
- * Estimated profit at the sale price (not what was actually received — see
- * modalPesanan()/syncPesanan() for the ledger-posted profit, which is based on
- * actual payments and can differ on overpayment or a forced Lunas).
+ * Estimated profit at the asking price (hargaSaat), not necessarily what was
+ * actually received — an order can be marked Lunas while underpaid (discount
+ * or write-off via tandaiLunas) or overpaid, in which case realized profit
+ * differs from this. This is what the order form/list show per order; the
+ * dashboard and laporan compute realized profit from actual payments instead
+ * (see untungRealisasi).
  * - single item: (hargaSaat - modalSaat) * jumlah
  * - paket: harga - sum(komponen.pcs * modalSaat)
  */

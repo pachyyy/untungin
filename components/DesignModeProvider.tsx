@@ -17,7 +17,6 @@ const DesignModeContext = React.createContext<{
 const NO_FLASH_SCRIPT = `(function(){try{var m=localStorage.getItem('${STORAGE_KEY}');if(m==='brutalist'||m==='minimal')document.documentElement.setAttribute('data-design-mode',m);}catch(e){}})();`;
 
 export function DesignModeScript() {
-  // eslint-disable-next-line react/no-danger
   return <script dangerouslySetInnerHTML={{ __html: NO_FLASH_SCRIPT }} />;
 }
 

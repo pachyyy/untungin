@@ -11,13 +11,27 @@ import {
 
 export type LoginState = { error?: string };
 
+// Fixed delay applied to every login attempt, success or failure alike, so a
+// scripted guesser can't use response time to tell which passwords are
+// "closer" and can't speed past ~2.5 attempts/sec by hammering the endpoint.
+const LOGIN_DELAY_MS = 400;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function loginAction(
   _prev: LoginState,
   formData: FormData
 ): Promise<LoginState> {
   const password = String(formData.get("password") ?? "");
 
-  if (!checkPassword(password)) {
+  const [ok] = await Promise.all([
+    Promise.resolve(checkPassword(password)),
+    delay(LOGIN_DELAY_MS),
+  ]);
+
+  if (!ok) {
     return { error: "Password salah. Coba lagi." };
   }
 

@@ -3,12 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
-
-function parsePositiveInt(value: FormDataEntryValue | null): number | null {
-  const n = Number(String(value ?? "").replace(/[^0-9]/g, ""));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.floor(n);
-}
+import { parseIntField } from "@/lib/parse";
 
 function revalidateAll() {
   revalidatePath("/produk");
@@ -23,8 +18,8 @@ function revalidateAll() {
  */
 export async function restockProduk(formData: FormData): Promise<ActionResult> {
   const produkId = String(formData.get("produkId") ?? "");
-  const qty = parsePositiveInt(formData.get("qty"));
-  const hargaBeli = parsePositiveInt(formData.get("hargaBeli"));
+  const qty = parseIntField(formData.get("qty"));
+  const hargaBeli = parseIntField(formData.get("hargaBeli"));
   const tanggalStr = String(formData.get("tanggal") ?? "");
 
   if (!produkId) return { ok: false, error: "Produk tidak ditemukan." };

@@ -19,22 +19,34 @@ export async function sessionToken(): Promise<string> {
   return sha256Hex("untungin:" + password);
 }
 
-/** Constant-time-ish comparison of a candidate cookie value against the token. */
+/**
+ * Constant-time string comparison: walks the full length of the longer
+ * string regardless of where (or whether) a mismatch occurs, so neither a
+ * length difference nor an early differing byte shortens the comparison —
+ * that timing difference is exactly what would otherwise leak information to
+ * a scripted guesser. Used for both the session cookie and the raw password.
+ */
+function timingSafeEqual(a: string, b: string): boolean {
+  const len = Math.max(a.length, b.length);
+  let diff = a.length === b.length ? 0 : 1;
+  for (let i = 0; i < len; i++) {
+    diff |= (a.charCodeAt(i) || 0) ^ (b.charCodeAt(i) || 0);
+  }
+  return diff === 0;
+}
+
+/** Constant-time comparison of a candidate cookie value against the token. */
 export async function isValidSession(
   cookieValue: string | undefined
 ): Promise<boolean> {
   if (!cookieValue) return false;
   const expected = await sessionToken();
-  if (cookieValue.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= cookieValue.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
+  return timingSafeEqual(cookieValue, expected);
 }
 
-/** Check a submitted password against APP_PASSWORD. */
+/** Check a submitted password against APP_PASSWORD (constant-time). */
 export function checkPassword(candidate: string): boolean {
   const password = process.env.APP_PASSWORD ?? "";
-  return password.length > 0 && candidate === password;
+  if (password.length === 0) return false;
+  return timingSafeEqual(candidate, password);
 }

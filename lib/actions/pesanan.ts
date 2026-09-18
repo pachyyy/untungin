@@ -143,10 +143,9 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
       };
   }
 
-  let pesananId = "";
   await prisma.$transaction(async (tx) => {
     const customerId = await resolveCustomerId(tx, namaCustomer, noHp || null);
-    const created = await tx.pesanan.create({
+    await tx.pesanan.create({
       data: {
         namaCustomer,
         noHp: noHp || null,
@@ -180,7 +179,6 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
         },
       },
     });
-    pesananId = created.id;
 
     // Stock leaves the moment the order is placed — status is now purely financial.
     for (const [produkId, qty] of needs) {

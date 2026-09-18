@@ -15,12 +15,13 @@ model Produk {
   supplier    Supplier           @relation(fields: [supplierId], references: [id])
   hargaModal  Int
   stok        Int                @default(0)
-  fotoUrl     String?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   items       PesananItem[]
   paketItems  PesananPaketItem[]
   restock     Restock[]
+
+  @@index([supplierId])
 }
 
 // A stock-in event: qty added and the price paid for it. hargaModal on Produk
@@ -57,6 +58,10 @@ model Pesanan {
   pembayaran   Pembayaran[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([customerId])
 }
 
 model Customer {
@@ -79,6 +84,9 @@ model PesananItem {
   jumlah     Int
   hargaSaat  Int // snapshot harga jual saat transaksi
   modalSaat  Int @default(0) // snapshot produk.hargaModal saat transaksi, or the typed HPP for a dropship item
+
+  @@index([pesananId])
+  @@index([produkId])
 }
 
 // A bundle line within an order: several products combined, sold at one price.
@@ -89,6 +97,8 @@ model PesananPaket {
   nama      String             @default("Paket")
   harga     Int // bundle selling price for the whole paket
   komponen  PesananPaketItem[]
+
+  @@index([pesananId])
 }
 
 model PesananPaketItem {
@@ -99,6 +109,9 @@ model PesananPaketItem {
   produk    Produk       @relation(fields: [produkId], references: [id])
   pcs       Int // how many pcs of this product are in the paket
   modalSaat Int @default(0) // snapshot produk.hargaModal saat transaksi
+
+  @@index([paketId])
+  @@index([produkId])
 }
 
 // One payment against an order (single full payment, or one installment).

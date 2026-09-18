@@ -5,12 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { totalPesanan } from "@/lib/calc";
 import type { ActionResult } from "@/lib/actions/supplier";
-
-function parsePositiveInt(value: FormDataEntryValue | null): number | null {
-  const n = Number(String(value ?? "").replace(/[^0-9]/g, ""));
-  if (!Number.isFinite(n) || n <= 0) return null;
-  return Math.floor(n);
-}
+import { parseIntField } from "@/lib/parse";
 
 /**
  * Derives status from payments-so-far and updates it if changed.
@@ -54,7 +49,7 @@ export async function tambahPembayaran(formData: FormData): Promise<ActionResult
   const pesananId = String(formData.get("pesananId") ?? "");
   const tanggalStr = String(formData.get("tanggal") ?? "");
   const metode = String(formData.get("metode") ?? "").trim().slice(0, 40) || null;
-  const jumlah = parsePositiveInt(formData.get("jumlah"));
+  const jumlah = parseIntField(formData.get("jumlah"));
   const jenis = String(formData.get("jenis") ?? "cicilan") === "bayar" ? "bayar" : "cicilan";
 
   if (!pesananId) return { ok: false, error: "Pesanan tidak ditemukan." };
