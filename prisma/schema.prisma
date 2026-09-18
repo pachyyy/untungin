@@ -55,12 +55,19 @@ model Pesanan {
   items        PesananItem[]
   pakets       PesananPaket[]
   status       String         @default("belum_bayar") // belum_bayar, nyicil, lunas
+  // Denormalized copy of STATUS_RANK[status] (lib/calc.ts) — 0/1/2 for
+  // belum_bayar/nyicil/lunas. Exists purely so the pesanan list can be
+  // ORDER BY'd unpaid-first in Postgres, which can't sort a String column by
+  // an arbitrary priority. Every site that writes `status` must also write
+  // this; STATUS_RANK is the single source of truth for what value to use.
+  statusRank   Int            @default(0)
   pembayaran   Pembayaran[]
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
   @@index([createdAt])
   @@index([status, createdAt])
+  @@index([statusRank, createdAt])
   @@index([customerId])
 }
 

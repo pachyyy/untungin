@@ -13,6 +13,20 @@ export const STATUS_LABEL: Record<Status, string> = {
   lunas: "Lunas",
 };
 
+/**
+ * Priority order for sorting pesanan lists (unpaid first). Mirrors
+ * Pesanan.statusRank on the DB row — that column exists only so Postgres can
+ * sort by this order (it can't sort a String column by an arbitrary
+ * priority), so this map is the single source of truth: every site that
+ * writes `status` must also write `statusRank: STATUS_RANK[status]` to keep
+ * the two in sync.
+ */
+export const STATUS_RANK: Record<Status, number> = {
+  belum_bayar: 0,
+  nyicil: 1,
+  lunas: 2,
+};
+
 type ItemLike = { jumlah: number; hargaSaat: number; modalSaat: number };
 type PaketKomponenLike = { pcs: number; modalSaat: number };
 type PaketLike = { harga: number; komponen: PaketKomponenLike[] };
@@ -32,8 +46,17 @@ export function modalPesanan(p: PesananLike): number {
   return items + pakets;
 }
 
+// Deliberately narrower than PesananLike: totalPesanan only ever reads
+// hargaSaat/jumlah/harga, never modalSaat or paket komponen, so a pesanan
+// list view can select just these fields (skipping the modalSaat column and
+// the whole komponen/produk join) without losing type compatibility here —
+// any PesananLike still satisfies this too, since it has strictly more.
+type TotalItemLike = { jumlah: number; hargaSaat: number };
+type TotalPaketLike = { harga: number };
+type TotalPesananLike = { items: TotalItemLike[]; pakets?: TotalPaketLike[] };
+
 /** Total order value = single items (hargaSaat * jumlah) + pakets (harga). */
-export function totalPesanan(p: PesananLike): number {
+export function totalPesanan(p: TotalPesananLike): number {
   const items = p.items.reduce((s, it) => s + it.hargaSaat * it.jumlah, 0);
   const pakets = (p.pakets ?? []).reduce((s, pk) => s + pk.harga, 0);
   return items + pakets;

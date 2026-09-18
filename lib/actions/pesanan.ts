@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { resolveCustomerId } from "@/lib/actions/customer";
+import { STATUS_RANK } from "@/lib/calc";
 
 // produkId set = stock item (decrements Produk.stok). produkId null = dropship
 // item typed directly on the order: namaManual + modalManual carry what a
@@ -173,6 +174,7 @@ export async function createPesanan(formData: FormData): Promise<ActionResult> {
           noHp: noHp || null,
           customerId,
           status: "belum_bayar",
+          statusRank: STATUS_RANK.belum_bayar,
           items: {
             create: items.map((it) => ({
               produkId: it.produkId,
@@ -361,7 +363,10 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
       const newStatus =
         totalDibayar <= 0 ? "belum_bayar" : totalDibayar >= newTotal ? "lunas" : "nyicil";
       if (newStatus !== existing.status) {
-        await tx.pesanan.update({ where: { id }, data: { status: newStatus } });
+        await tx.pesanan.update({
+          where: { id },
+          data: { status: newStatus, statusRank: STATUS_RANK[newStatus] },
+        });
       }
     });
   } catch (e) {

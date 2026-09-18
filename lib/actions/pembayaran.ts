@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { totalPesanan } from "@/lib/calc";
+import { totalPesanan, STATUS_RANK } from "@/lib/calc";
 import type { ActionResult } from "@/lib/actions/supplier";
 import { parseIntField } from "@/lib/parse";
 import { parseDateOnlyJakarta } from "@/lib/date";
@@ -35,7 +35,10 @@ async function recomputeStatus(
   const dibayar = pesanan.pembayaran.reduce((s, p) => s + p.jumlah, 0);
   const status = dibayar <= 0 ? "belum_bayar" : dibayar >= total ? "lunas" : "nyicil";
   if (status !== pesanan.status) {
-    await tx.pesanan.update({ where: { id: pesananId }, data: { status } });
+    await tx.pesanan.update({
+      where: { id: pesananId },
+      data: { status, statusRank: STATUS_RANK[status] },
+    });
   }
 }
 
@@ -104,7 +107,10 @@ export async function tandaiLunas(formData: FormData): Promise<ActionResult> {
   if (pesanan.pembayaran.length === 0)
     return { ok: false, error: "Tambahkan minimal satu pembayaran dulu." };
 
-  await prisma.pesanan.update({ where: { id: pesananId }, data: { status: "lunas" } });
+  await prisma.pesanan.update({
+    where: { id: pesananId },
+    data: { status: "lunas", statusRank: STATUS_RANK.lunas },
+  });
 
   revalidateAll();
   return { ok: true };
