@@ -60,16 +60,21 @@ After changing `prisma/schema.prisma`, run `npm run db:push` locally (it targets
 
 **Path alias**: `@/*` maps to the repo root (see `tsconfig.json`).
 
-## Mobile client (planned)
+## Mobile client (in progress)
 
-A native Android app lives in a **separate repository** (`01_untungin_mobile`, Expo / React Native + TypeScript). It is a client of this repo, not a fork of it, and this has consequences here:
+A native Android app lives in a **separate repository** (`01_untungin_mobile`, Expo / React Native + TypeScript, not yet scaffolded). It is a client of this repo, not a fork of it, and this has consequences here:
 
 - The API will be served from the same Vercel deployment as the web app, so it inherits Vercel's TLS and needs no separate host or domain (`https://<project>.vercel.app/api/v1/...`).
-- **This app currently exposes no HTTP API.** Every read is a Server Component querying Prisma inline and every write is a Server Action; neither is callable from outside a Next.js client. The mobile app requires a real API surface under `app/api/v1/` to be added here first.
-- Domain logic must not be reimplemented on the device. Stock reconciliation (`stockNeeds()` inside `prisma.$transaction`) and the `status`/`statusRank` pairing are correctness-critical and stay server-side. The shape to aim for is `lib/services/*.ts` holding the real logic, with both the `"use server"` action (web) and the route handler (mobile) as thin callers.
+- **This app currently exposes no HTTP API.** Every read is a Server Component querying Prisma inline and every write is a Server Action; neither is callable from outside a Next.js client. The mobile app requires a real API surface under `app/api/v1/` to be added here first (not yet done — see status below).
+- Domain logic must not be reimplemented on the device. Stock reconciliation (`stockNeeds()` inside `prisma.$transaction`) and the `status`/`statusRank` pairing are correctness-critical and stay server-side.
 - The pure helpers — `lib/calc.ts`, `lib/format.ts`, `lib/date.ts`, `lib/parse.ts` — are copied into the mobile repo verbatim. They have no server dependencies, so keep them that way: do not import Prisma, `next/*`, or anything Node-only into them.
 - API routes must be **versioned** (`/api/v1/...`). Installed APKs keep calling old endpoints for months, unlike a web page that redeploys atomically.
-- Auth differs from the web's shared-password cookie: mobile enrolls per-device revocable tokens, because the app is sideloaded to staff phones and a single shared secret cannot be revoked for one person.
+- Auth differs from the web's shared-password cookie: mobile enrolls per-device revocable tokens (see `Device`/`EnrollCode` below), because the app is sideloaded to staff phones and a single shared secret cannot be revoked for one person.
+
+**Status:**
+- ✅ **Service layer** — `lib/services/*.ts` holds the real logic (validation, Prisma writes, stock/status invariants) as plain functions returning `ServiceResult<T>` (`lib/services/types.ts`). `lib/actions/*.ts` are thin callers: read FormData, call the service, revalidate on success. The future route handlers under `app/api/v1/` will be the second caller of the same services — no logic duplicated between web and mobile.
+- ✅ **Schema** — `Device` (an enrolled phone/tablet; role `"owner" | "staff"`; holds only a hash of its current refresh token, never the token; revoked via `revokedAt`, never deleted) and `EnrollCode` (a short-lived single-use code the owner generates so staff can enroll without learning `APP_PASSWORD`) exist in `prisma/schema.prisma` and are live on Supabase. `Pesanan.createdByDeviceId` / `Pembayaran.createdByDeviceId` are nullable (`null` = created from the web) and already accepted as an unused `actor` parameter by every mutating service, so wiring up real device auth won't require changing those signatures again.
+- ⬜ **Not started**: the `app/api/v1/*` route handlers themselves, JWT/refresh-token issuing (`lib/api/auth.ts`), the enroll-code UI in Settings, and the Expo app in `01_untungin_mobile`.
 
 ## Notes & Gotchas
 - Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
