@@ -65,10 +65,18 @@ model Pesanan {
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
+  // Which mobile device created this order — null for every order created
+  // from the web app (single shared login, no per-device identity there).
+  // SetNull rather than Cascade/Restrict: revoking or removing a Device must
+  // never touch, let alone delete, the orders it created.
+  createdByDeviceId String?
+  createdByDevice   Device?  @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
+
   @@index([createdAt])
   @@index([status, createdAt])
   @@index([statusRank, createdAt])
   @@index([customerId])
+  @@index([createdByDeviceId])
 }
 
 model Customer {
@@ -133,5 +141,47 @@ model Pembayaran {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
+  // Which mobile device recorded this payment — null for the web app, same
+  // reasoning as Pesanan.createdByDeviceId above.
+  createdByDeviceId String?
+  createdByDevice   Device?  @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
+
   @@index([pesananId, tanggal])
+  @@index([createdByDeviceId])
+}
+
+// A phone/tablet enrolled to use the mobile app. Not a user account — the
+// app still has no concept of individual users, only devices with a role.
+// Revoking access is `revokedAt = now()`, never a delete: deleting a Device
+// row would null out createdByDeviceId on every order/payment it made (see
+// onDelete: SetNull above), destroying attribution history for no reason.
+model Device {
+  id               String       @id @default(cuid())
+  nama             String // owner-chosen label, e.g. "HP Rina"
+  role             String // "owner" | "staff"
+  // SHA-256 of the current refresh token — never the token itself. Rotated
+  // on every refresh; reuse of an old token is treated as theft and revokes
+  // the device (see lib/api/auth.ts, planned).
+  refreshTokenHash String       @unique
+  lastSeenAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime     @default(now())
+  pesanan          Pesanan[]
+  pembayaran       Pembayaran[]
+
+  @@index([revokedAt])
+}
+
+// A one-time code the owner generates (from Settings on the web app) so a
+// staff phone can enroll without ever learning APP_PASSWORD. Short-lived and
+// single-use: `usedAt` is set the moment it creates a Device, and a request
+// past `expiresAt` is rejected regardless.
+model EnrollCode {
+  id        String    @id @default(cuid())
+  codeHash  String    @unique // SHA-256 of the 8-char code shown to the owner
+  nama      String // device label the owner chose when generating the code
+  role      String    @default("staff")
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 }
