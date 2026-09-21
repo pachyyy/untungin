@@ -1,6 +1,24 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseIntField } from "@/lib/parse";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
+
+const produkListInclude = {
+  supplier: { select: { nama: true } },
+} satisfies Prisma.ProdukInclude;
+
+export type ProdukListItem = Prisma.ProdukGetPayload<{ include: typeof produkListInclude }>;
+
+/** Full product list for the mobile API (GET /produk). Staff and owner get
+ * the same rows; serializeProduk (lib/api/serialize.ts) is what strips
+ * hargaModal for staff. */
+export async function listProduk(): Promise<ServiceResult<ProdukListItem[]>> {
+  const rows = await prisma.produk.findMany({
+    orderBy: { createdAt: "desc" },
+    include: produkListInclude,
+  });
+  return ok(rows);
+}
 
 export type ProdukFormInput = {
   nama: string;

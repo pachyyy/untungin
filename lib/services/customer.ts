@@ -1,6 +1,12 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type Customer } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
+
+/** Full customer list for the mobile API (GET /pelanggan). */
+export async function listCustomers(): Promise<ServiceResult<Customer[]>> {
+  const rows = await prisma.customer.findMany({ orderBy: { nama: "asc" } });
+  return ok(rows);
+}
 
 /**
  * Find a customer by nama (case-insensitive) or create one. Never overwrites

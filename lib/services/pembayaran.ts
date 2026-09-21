@@ -49,7 +49,7 @@ export type TambahPembayaranInput = {
 
 export async function tambahPembayaran(
   input: TambahPembayaranInput,
-  _actor: Actor = WEB_ACTOR
+  actor: Actor = WEB_ACTOR
 ): Promise<ServiceResult<{ id: string }>> {
   const pesananId = input.pesananId;
   const tanggalStr = input.tanggal;
@@ -66,7 +66,7 @@ export async function tambahPembayaran(
   let createdId = "";
   await prisma.$transaction(async (tx) => {
     const created = await tx.pembayaran.create({
-      data: { pesananId, tanggal, metode, jumlah, jenis },
+      data: { pesananId, tanggal, metode, jumlah, jenis, createdByDeviceId: actor.deviceId },
     });
     createdId = created.id;
     await recomputeStatus(tx, pesananId, false);
@@ -77,12 +77,21 @@ export async function tambahPembayaran(
 
 export async function hapusPembayaran(
   id: string,
-  _actor: Actor = WEB_ACTOR
+  _actor: Actor = WEB_ACTOR,
+  /** The mobile API's route is nested under a pesanan id
+   * (/pesanan/[id]/pembayaran/[pid]), unlike the web action which only ever
+   * has the payment id. When given, a payment that belongs to a *different*
+   * order than the URL claims is treated as not found — the URL's pesanan
+   * id is part of what identifies the resource, not just decoration. */
+  expectedPesananId?: string
 ): Promise<ServiceResult<{ id: string }>> {
   if (!id) return fail("Pembayaran tidak ditemukan.", 404);
 
   const bayar = await prisma.pembayaran.findUnique({ where: { id } });
   if (!bayar) return fail("Pembayaran tidak ditemukan.", 404);
+  if (expectedPesananId && bayar.pesananId !== expectedPesananId) {
+    return fail("Pembayaran tidak ditemukan.", 404);
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.pembayaran.delete({ where: { id } });

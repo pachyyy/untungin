@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveCustomerId } from "@/lib/services/customer";
 import { STATUS_RANK } from "@/lib/calc";
@@ -8,6 +9,58 @@ import {
   type ItemInput,
   type PaketKomponenInput,
 } from "@/lib/services/pesanan-input";
+
+// Shared include shape for the mobile API's list/detail reads — the same
+// relations lib/services/lists.ts's getPesananListView() fetches for the
+// web, kept as its own Prisma-checked const (`satisfies`) so
+// PesananWithRelations stays in sync with the actual query rather than a
+// hand-written type that could drift from it.
+const pesananInclude = {
+  items: { include: { produk: { select: { nama: true } } } },
+  pakets: {
+    include: { komponen: { include: { produk: { select: { nama: true } } } } },
+  },
+  pembayaran: { orderBy: { tanggal: "asc" as const } },
+} satisfies Prisma.PesananInclude;
+
+export type PesananWithRelations = Prisma.PesananGetPayload<{
+  include: typeof pesananInclude;
+}>;
+
+export type ListPesananInput = { cursor?: string; limit?: number; status?: string };
+export type ListPesananResult = { items: PesananWithRelations[]; nextCursor: string | null };
+
+/** Cursor-paginated order list for the mobile app. `limit` is clamped to
+ * [1, 100] regardless of what's requested, so a malformed or malicious
+ * query string can't force an unbounded fetch. */
+export async function listPesanan(
+  input: ListPesananInput
+): Promise<ServiceResult<ListPesananResult>> {
+  const limit = Math.min(Math.max(input.limit ?? 30, 1), 100);
+  const where: Prisma.PesananWhereInput = input.status ? { status: input.status } : {};
+
+  const rows = await prisma.pesanan.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: limit + 1,
+    ...(input.cursor ? { cursor: { id: input.cursor }, skip: 1 } : {}),
+    include: pesananInclude,
+  });
+
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
+  return ok({ items, nextCursor });
+}
+
+export async function getPesananById(
+  id: string
+): Promise<ServiceResult<PesananWithRelations>> {
+  if (!id) return fail("Pesanan tidak ditemukan.", 404);
+  const row = await prisma.pesanan.findUnique({ where: { id }, include: pesananInclude });
+  if (!row) return fail("Pesanan tidak ditemukan.", 404);
+  return ok(row);
+}
 
 /** Total pcs needed per product, across single items and paket components.
  * Dropship items (produkId null) hold no stock and are skipped. */
@@ -57,7 +110,7 @@ export type CreatePesananInput = {
 
 export async function createPesanan(
   input: CreatePesananInput,
-  _actor: Actor = WEB_ACTOR
+  actor: Actor = WEB_ACTOR
 ): Promise<ServiceResult<{ id: string }>> {
   const namaCustomer = input.namaCustomer.trim();
   const noHp = input.noHp.trim();
@@ -102,6 +155,7 @@ export async function createPesanan(
           customerId,
           status: "belum_bayar",
           statusRank: STATUS_RANK.belum_bayar,
+          createdByDeviceId: actor.deviceId,
           items: {
             create: items.map((it) => ({
               produkId: it.produkId,

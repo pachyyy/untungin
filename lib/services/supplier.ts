@@ -1,6 +1,20 @@
 import { prisma } from "@/lib/prisma";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 
+export type SupplierListItem = { id: string; nama: string; kontak: string | null; jumlahProduk: number };
+
+/** Full supplier list for the mobile API (GET /supplier), each with its
+ * produk count — same shape as the web's getSupplierListView. */
+export async function listSuppliers(): Promise<ServiceResult<SupplierListItem[]>> {
+  const rows = await prisma.supplier.findMany({
+    orderBy: { nama: "asc" },
+    include: { _count: { select: { produk: true } } },
+  });
+  return ok(
+    rows.map((s) => ({ id: s.id, nama: s.nama, kontak: s.kontak, jumlahProduk: s._count.produk }))
+  );
+}
+
 export type SupplierFormInput = { nama: string; kontak: string };
 
 export async function createSupplier(
