@@ -156,18 +156,31 @@ model Pembayaran {
 // row would null out createdByDeviceId on every order/payment it made (see
 // onDelete: SetNull above), destroying attribution history for no reason.
 model Device {
-  id               String       @id @default(cuid())
-  nama             String // owner-chosen label, e.g. "HP Rina"
-  role             String // "owner" | "staff"
-  // SHA-256 of the current refresh token — never the token itself. Rotated
-  // on every refresh; reuse of an old token is treated as theft and revokes
-  // the device (see lib/api/auth.ts, planned).
-  refreshTokenHash String       @unique
-  lastSeenAt       DateTime?
-  revokedAt        DateTime?
-  createdAt        DateTime     @default(now())
-  pesanan          Pesanan[]
-  pembayaran       Pembayaran[]
+  id           String @id @default(cuid())
+  nama         String // owner-chosen label, e.g. "HP Rina"
+  role         String // "owner" | "staff"
+
+  // SHA-256 of the *current* refresh token — never the token itself.
+  // refreshTokenIssuedAt anchors the 60-day validity window (lib/api/auth.ts):
+  // a token older than that is rejected even if the hash still matches.
+  refreshTokenHash     String    @unique
+  refreshTokenIssuedAt DateTime?
+
+  // SHA-256 of the token this one *replaced*, kept for exactly one rotation.
+  // A request presenting this hash means someone is reusing a token already
+  // spent by a previous refresh — the legitimate client has since moved on
+  // to the current one — which is the standard signal for a stolen refresh
+  // token. Detecting that requires remembering the stale hash for one more
+  // round; without it, a reused token would just look like "unknown token"
+  // (a safe failure on its own, but not the "revoke the device" response
+  // this is designed to give).
+  previousRefreshTokenHash String? @unique
+
+  lastSeenAt DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime     @default(now())
+  pesanan    Pesanan[]
+  pembayaran Pembayaran[]
 
   @@index([revokedAt])
 }
