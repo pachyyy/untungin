@@ -12,9 +12,10 @@ Supabase (PostgreSQL)**. Target deploy: **Vercel**.
 - 📊 Dashboard: untung & omzet bulan ini, pesanan pending, stok menipis
 - 📦 Produk: CRUD, margin otomatis, pilih/tambah supplier langsung dari form
 - 🏭 Supplier: CRUD + jumlah produk + tombol WA
-- 🧾 Pesanan: multi-item, harga jual di-snapshot, filter status, update status
+- 🧾 Pesanan: multi-item + paket (bundel), item dropship tanpa stok, harga jual di-snapshot, status otomatis mengikuti pembayaran (`belum_bayar` / `nyicil` / `lunas`)
+- 👥 Pelanggan: dikenali otomatis dari nama saat bikin pesanan, atau dikelola manual
 - 📈 Laporan: grafik untung per bulan (Recharts), rentang tanggal, produk terlaris
-- 💰 Stok otomatis berkurang saat pesanan `dikirim`/`selesai`, dan kembali bila dibatalkan
+- 💰 Stok berkurang saat pesanan **dibuat** (bukan menunggu status tertentu), kembali otomatis saat pesanan dihapus atau qty-nya dikurangi
 
 ## Menjalankan secara lokal
 
@@ -36,8 +37,8 @@ Perintah lain:
 | Nama           | Kegunaan                                                         |
 | -------------- | --------------------------------------------------------------- |
 | `APP_PASSWORD` | Password login tunggal                                          |
-| `DATABASE_URL` | Koneksi runtime — **Transaction pooler** Supabase (port 6543)   |
-| `DIRECT_URL`   | Koneksi migrasi — **Session pooler** Supabase (port 5432)       |
+| `DATABASE_URL` | Koneksi runtime — **Transaction pooler** Supabase (port 6543, `?pgbouncer=true&connection_limit=1&sslmode=require`) |
+| `DIRECT_URL`   | Koneksi migrasi — **Session pooler** Supabase (port 5432, `?sslmode=require`) |
 
 > **Penting soal Supabase:** jangan pakai "Direct connection" (`db.<ref>.supabase.co`).
 > Host itu sekarang IPv6-only dan biasanya tak bisa dijangkau dari laptop maupun
@@ -79,12 +80,16 @@ Selesai. Buka URL Vercel, login dengan `APP_PASSWORD`, dan mulai catat produk & 
 ```
 app/
   (app)/            # halaman terproteksi + bottom nav
-    dashboard/ produk/ supplier/ pesanan/ laporan/
+    dashboard/ produk/ supplier/ pesanan/ pelanggan/ laporan/ settings/
   login/            # halaman login (di luar proteksi)
 components/ui/      # Button, Card, Input, Modal, BottomNav, dsb.
 lib/
-  actions/          # server actions (produk, supplier, pesanan, auth)
-  prisma.ts calc.ts format.ts auth.ts cn.ts
+  actions/          # server actions (produk, supplier, pesanan, pembayaran, customer, auth)
+  prisma.ts calc.ts format.ts date.ts parse.ts auth.ts cn.ts
 prisma/schema.prisma
 middleware.ts       # proteksi semua route kecuali /login
 ```
+
+> Ada rencana aplikasi Android terpisah (repo `01_untungin_mobile`) yang akan
+> memanggil app ini lewat API baru di `app/api/v1/`. Lihat `CLAUDE.md` bagian
+> "Mobile client" untuk detail dan status rencananya.

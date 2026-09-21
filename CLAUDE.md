@@ -23,11 +23,15 @@ There is no test suite in this repo.
 
 ## Environment / database
 
-Requires `APP_PASSWORD`, `DATABASE_URL`, `DIRECT_URL` (see `.env.example`). Supabase must be reached through the **connection pooler**, never the direct `db.<ref>.supabase.co` host — that host is IPv6-only and unreachable from most laptops and from Vercel, causing `P1001`. `DATABASE_URL` = Transaction pooler (port 6543, `?pgbouncer=true`), used at runtime. `DIRECT_URL` = Session pooler (port 5432), used by `prisma db push`/migrations.
+Requires `APP_PASSWORD`, `DATABASE_URL`, `DIRECT_URL` (see `.env.example`). Supabase must be reached through the **connection pooler**, never the direct `db.<ref>.supabase.co` host — that host is IPv6-only and unreachable from most laptops and from Vercel, causing `P1001`. `DATABASE_URL` = Transaction pooler (port 6543, `?pgbouncer=true&connection_limit=1&sslmode=require`), used at runtime. `DIRECT_URL` = Session pooler (port 5432, `?sslmode=require`), used by `prisma db push`/migrations.
+
+`connection_limit=1` on `DATABASE_URL` matters specifically because of serverless: each Vercel function instance opens its own Prisma pool, and without a cap a burst of concurrent invocations can exhaust the pooler's connections (`P2024`/`too many clients`). `sslmode=require` is on both — the connection crosses the public internet (Vercel ↔ Supabase), so it must be encrypted; Prisma's unset default (`prefer`) would silently accept a plaintext fallback instead of failing loud.
 
 After changing `prisma/schema.prisma`, run `npm run db:push` locally (it targets the same Supabase database Vercel uses) and redeploy — there is no migration-on-deploy step.
 
 `vercel.json` pins Serverless Function region to `sin1` (Singapore) to match the Supabase project's `ap-southeast-1` region — without this, every DB query from a deployed function crosses the Pacific twice (US-default function region ↔ Singapore DB), which dominates page load time far more than anything query-level. If the Supabase project ever moves region, update this to match.
+
+**History**: this briefly ran on a self-hosted Postgres container on a Contabo VPS (via Coolify) instead of Supabase. That's been reverted — Supabase is the live database again — but the VPS Postgres instance is left running as a dormant rollback safety net for now, holding a stale copy of the data as of the reversion. Don't confuse references to it (or to a "split deployment") found in old commits/docs with the current setup.
 
 ## Architecture
 
@@ -55,6 +59,17 @@ After changing `prisma/schema.prisma`, run `npm run db:push` locally (it targets
 **UI components** (`components/ui/`): shadcn/ui-style primitives (Button, Card, Input, Modal, Combobox, Command, Popover, Badge, StatusBadge, Skeleton, ListSkeleton, SearchInput, PageHeader, BottomNav) built on Radix primitives + `class-variance-authority` + `tailwind-merge`. `lib/cn.ts` re-exports `cn` from `lib/utils.ts` for backwards compatibility — import either, they're the same function. Colors are HSL CSS variables defined in `app/globals.css` under `:root` and `.dark` (light/dark themes via `next-themes`, toggled in Settings) — reference them through Tailwind's semantic classes (`bg-primary`, `text-muted`, `border-border`, etc.), not raw hex values. An optional dropdown (e.g. the payment `metode` field) is a plain native `<select>`, not the Radix-based primitive — Radix's `Select` reserves the empty string as its "clear" signal and throws if any `<option>`-equivalent uses it, so a nullable choice is simpler as native HTML.
 
 **Path alias**: `@/*` maps to the repo root (see `tsconfig.json`).
+
+## Mobile client (planned)
+
+A native Android app lives in a **separate repository** (`01_untungin_mobile`, Expo / React Native + TypeScript). It is a client of this repo, not a fork of it, and this has consequences here:
+
+- The API will be served from the same Vercel deployment as the web app, so it inherits Vercel's TLS and needs no separate host or domain (`https://<project>.vercel.app/api/v1/...`).
+- **This app currently exposes no HTTP API.** Every read is a Server Component querying Prisma inline and every write is a Server Action; neither is callable from outside a Next.js client. The mobile app requires a real API surface under `app/api/v1/` to be added here first.
+- Domain logic must not be reimplemented on the device. Stock reconciliation (`stockNeeds()` inside `prisma.$transaction`) and the `status`/`statusRank` pairing are correctness-critical and stay server-side. The shape to aim for is `lib/services/*.ts` holding the real logic, with both the `"use server"` action (web) and the route handler (mobile) as thin callers.
+- The pure helpers — `lib/calc.ts`, `lib/format.ts`, `lib/date.ts`, `lib/parse.ts` — are copied into the mobile repo verbatim. They have no server dependencies, so keep them that way: do not import Prisma, `next/*`, or anything Node-only into them.
+- API routes must be **versioned** (`/api/v1/...`). Installed APKs keep calling old endpoints for months, unlike a web page that redeploys atomically.
+- Auth differs from the web's shared-password cookie: mobile enrolls per-device revocable tokens, because the app is sideloaded to staff phones and a single shared secret cannot be revoked for one person.
 
 ## Notes & Gotchas
 - Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
