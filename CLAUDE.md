@@ -60,7 +60,7 @@ After changing `prisma/schema.prisma`, run `npm run db:push` locally (it targets
 
 **Path alias**: `@/*` maps to the repo root (see `tsconfig.json`).
 
-## Mobile client (API done, app not started)
+## Mobile client (backend done, Expo app not started)
 
 A native Android app lives in a **separate repository** (`01_untungin_mobile`, Expo / React Native + TypeScript, not yet scaffolded). It is a client of this repo, not a fork of it, and this has consequences here:
 
@@ -74,7 +74,8 @@ A native Android app lives in a **separate repository** (`01_untungin_mobile`, E
 - ✅ **Service layer** — `lib/services/*.ts` holds the real logic (validation, Prisma writes, stock/status invariants) as plain functions returning `ServiceResult<T>` (`lib/services/types.ts`). `lib/actions/*.ts` (web) and `app/api/v1/*` (mobile) are both thin callers of the same functions.
 - ✅ **Schema** — `Device` (an enrolled phone/tablet; role `"owner" | "staff"`; holds only a hash of its current refresh token, plus the previous one for one rotation, never the token itself; revoked via `revokedAt`, never deleted) and `EnrollCode` (a short-lived single-use code the owner generates so staff can enroll without learning `APP_PASSWORD`) are live on Supabase. `Pesanan.createdByDeviceId` / `Pembayaran.createdByDeviceId` are written by the API (`null` = created from the web) — attribution is recorded at creation only, not on later edits.
 - ✅ **API** — the full route table is live under `app/api/v1/`: `auth/{owner,enroll,refresh,logout}`, `me`, `devices` (list/generate-code/revoke), `pesanan` (list/create/get/update/delete/payments/lunas), `produk` (list/create/update/delete/restock), `pelanggan` (list/create/update/delete), `supplier` (list/create/update/delete), `dashboard`, `laporan`. `lib/api/auth.ts` issues/verifies JWT access tokens (15 min) and rotates refresh tokens (60 days, reuse-detected); `lib/api/serialize.ts` strips cost/profit fields from every staff-facing response, enforced by what's actually in the JSON. Role matrix: staff can create/edit orders, record payments, and manage produk/pelanggan day-to-day; deleting a payment, forcing Lunas while underpaid, deleting an order, and anything supplier- or device-management-related is owner-only. Regression-tested by `scripts/api-smoke.ts` (`npx tsx scripts/api-smoke.ts` against a running `npm run dev` — creates and cleans up its own `__SMOKE_*`-named rows against the real dev database, there is no separate test DB).
-- ⬜ **Not started**: the enroll-code generation UI in Settings (currently only reachable by calling `POST /api/v1/devices/codes` directly), and the Expo app in `01_untungin_mobile` itself.
+- ✅ **Device management UI** — Settings → Perangkat (`app/(app)/settings/PerangkatManager.tsx`, `lib/actions/devices.ts`): generate an enrollment code (shown once, with a live 10-minute countdown), see active/revoked devices and last-active date, revoke a device. The whole web-side surface for the mobile app is now in place.
+- ⬜ **Not started**: the Expo app itself, in `01_untungin_mobile`. Everything it will talk to (auth, every resource route, device enrollment/management) already exists and is tested.
 
 ## Notes & Gotchas
 - Do not make any changes until you have 95% confidence in what you need to build. Ask me follow-up questions until you reach that confidence.
