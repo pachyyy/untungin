@@ -1,88 +1,43 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { prisma } from "@/lib/prisma";
 import type { ActionResult } from "@/lib/actions/supplier";
-import { parseIntField } from "@/lib/parse";
+import type { ServiceResult } from "@/lib/services/types";
+import * as produkService from "@/lib/services/produk";
+import { revalidateProdukWrite, revalidateProdukDelete } from "@/lib/services/revalidate";
 
-async function resolveSupplierId(formData: FormData): Promise<string | { error: string }> {
-  const supplierId = String(formData.get("supplierId") ?? "").trim();
-  // Inline "add new supplier" from the product form.
-  if (supplierId === "__new__") {
-    const nama = String(formData.get("supplierNama") ?? "").trim();
-    const kontak = String(formData.get("supplierKontak") ?? "").trim();
-    if (!nama) return { error: "Nama supplier baru wajib diisi." };
-    const created = await prisma.supplier.create({
-      data: { nama, kontak: kontak || null },
-    });
-    return created.id;
-  }
-  if (!supplierId) return { error: "Supplier wajib dipilih." };
-  return supplierId;
+function toActionResult(r: ServiceResult<unknown>): ActionResult {
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
+}
+
+function readProdukForm(formData: FormData) {
+  return {
+    nama: String(formData.get("nama") ?? ""),
+    hargaModal: formData.get("hargaModal"),
+    stok: formData.get("stok"),
+    supplierId: String(formData.get("supplierId") ?? ""),
+    supplierNama: String(formData.get("supplierNama") ?? ""),
+    supplierKontak: String(formData.get("supplierKontak") ?? ""),
+  };
 }
 
 export async function createProduk(formData: FormData): Promise<ActionResult> {
-  const nama = String(formData.get("nama") ?? "").trim();
-  const hargaModal = parseIntField(formData.get("hargaModal"));
-  const stok = parseIntField(formData.get("stok"), { min: 0 }) ?? 0;
-
-  if (!nama) return { ok: false, error: "Nama produk wajib diisi." };
-  if (hargaModal === null)
-    return { ok: false, error: "Harga modal harus angka lebih dari 0." };
-
-  const supplier = await resolveSupplierId(formData);
-  if (typeof supplier !== "string") return { ok: false, error: supplier.error };
-
-  await prisma.produk.create({
-    data: { nama, hargaModal, stok, supplierId: supplier },
-  });
-  revalidatePath("/produk");
-  revalidatePath("/dashboard");
-  revalidatePath("/supplier");
-  return { ok: true };
+  const result = await produkService.createProduk(readProdukForm(formData));
+  if (result.ok) revalidateProdukWrite();
+  return toActionResult(result);
 }
 
 export async function updateProduk(formData: FormData): Promise<ActionResult> {
-  const id = String(formData.get("id") ?? "");
-  const nama = String(formData.get("nama") ?? "").trim();
-  const hargaModal = parseIntField(formData.get("hargaModal"));
-  const stok = parseIntField(formData.get("stok"), { min: 0 }) ?? 0;
-
-  if (!id) return { ok: false, error: "Produk tidak ditemukan." };
-  if (!nama) return { ok: false, error: "Nama produk wajib diisi." };
-  if (hargaModal === null)
-    return { ok: false, error: "Harga modal harus angka lebih dari 0." };
-
-  const supplier = await resolveSupplierId(formData);
-  if (typeof supplier !== "string") return { ok: false, error: supplier.error };
-
-  await prisma.produk.update({
-    where: { id },
-    data: { nama, hargaModal, stok, supplierId: supplier },
+  const result = await produkService.updateProduk({
+    id: String(formData.get("id") ?? ""),
+    ...readProdukForm(formData),
   });
-  revalidatePath("/produk");
-  revalidatePath("/dashboard");
-  revalidatePath("/supplier");
-  return { ok: true };
+  if (result.ok) revalidateProdukWrite();
+  return toActionResult(result);
 }
 
 export async function deleteProduk(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
-  if (!id) return { ok: false, error: "Produk tidak ditemukan." };
-
-  const [usedItem, usedPaket] = await Promise.all([
-    prisma.pesananItem.count({ where: { produkId: id } }),
-    prisma.pesananPaketItem.count({ where: { produkId: id } }),
-  ]);
-  const used = usedItem + usedPaket;
-  if (used > 0) {
-    return {
-      ok: false,
-      error: `Tidak bisa dihapus: produk dipakai di ${used} item pesanan.`,
-    };
-  }
-  await prisma.produk.delete({ where: { id } });
-  revalidatePath("/produk");
-  revalidatePath("/dashboard");
-  return { ok: true };
+  const result = await produkService.deleteProduk(id);
+  if (result.ok) revalidateProdukDelete();
+  return toActionResult(result);
 }

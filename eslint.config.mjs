@@ -18,6 +18,18 @@ const eslintConfig = [
     ],
   },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // `_`-prefixed params are intentionally unused, not a mistake — e.g.
+      // lib/services/*.ts mutating functions take `_actor: Actor` now so
+      // the signature doesn't change again once the Device model (planned,
+      // see CLAUDE.md "Mobile client") lands and something actually reads it.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ];
 
 export default eslintConfig;
