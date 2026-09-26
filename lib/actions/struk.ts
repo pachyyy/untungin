@@ -1,8 +1,8 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/actions/supplier";
 import * as strukService from "@/lib/services/struk";
+import { revalidateStrukWrite } from "@/lib/services/revalidate";
 
 export async function updateStrukSettingAction(formData: FormData): Promise<ActionResult> {
   const str = (key: string) => String(formData.get(key) ?? "");
@@ -22,8 +22,6 @@ export async function updateStrukSettingAction(formData: FormData): Promise<Acti
   });
   if (!result.ok) return { ok: false, error: result.error };
 
-  revalidatePath("/settings");
-  revalidatePath("/settings/struk");
-  revalidatePath("/pesanan");
+  revalidateStrukWrite();
   return { ok: true };
 }

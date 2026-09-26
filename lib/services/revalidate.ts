@@ -74,3 +74,11 @@ export function revalidateCustomerWrite() {
 export function revalidateCustomerDelete() {
   revalidatePath("/pelanggan");
 }
+
+/** updateStrukSetting — /pesanan reads the setting for its Cetak Struk modal
+ * and nota-number labels. */
+export function revalidateStrukWrite() {
+  revalidatePath("/settings");
+  revalidatePath("/settings/struk");
+  revalidatePath("/pesanan");
+}

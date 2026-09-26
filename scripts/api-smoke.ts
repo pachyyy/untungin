@@ -208,6 +208,19 @@ async function main() {
       strukSetting.status === 200 && typeof strukSetting.json?.namaToko === "string",
       strukSetting
     );
+    const staffStrukPatch = await call("PATCH", "/struk-setting", { namaToko: "__SMOKE__" }, staffToken);
+    check("staff PATCH /struk-setting 403", staffStrukPatch.status === 403, staffStrukPatch);
+    // An empty body must change nothing (absent keys keep their value) — so
+    // this writes the real setting back unchanged instead of wiping it.
+    const emptyStrukPatch = await call("PATCH", "/struk-setting", {}, ownerToken);
+    check(
+      "owner PATCH /struk-setting {} keeps every field",
+      emptyStrukPatch.status === 200 &&
+        JSON.stringify(emptyStrukPatch.json) === JSON.stringify(strukSetting.json),
+      emptyStrukPatch
+    );
+    const badStrukPatch = await call("PATCH", "/struk-setting", { namaToko: "  " }, ownerToken);
+    check("owner PATCH /struk-setting blank namaToko 400", badStrukPatch.status === 400, badStrukPatch);
 
     // --------------------------------- concurrent stock guard (last unit)
     const raceProduk = await call(
