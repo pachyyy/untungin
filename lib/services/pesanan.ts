@@ -16,8 +16,9 @@ import {
 // PesananWithRelations stays in sync with the actual query rather than a
 // hand-written type that could drift from it.
 const pesananInclude = {
-  items: { include: { produk: { select: { nama: true } } } },
+  items: { orderBy: { id: "asc" as const }, include: { produk: { select: { nama: true } } } },
   pakets: {
+    orderBy: { id: "asc" as const },
     include: { komponen: { include: { produk: { select: { nama: true } } } } },
   },
   pembayaran: { orderBy: { tanggal: "asc" as const } },
@@ -162,6 +163,7 @@ export async function createPesanan(
               namaManual: it.namaManual,
               jumlah: it.jumlah,
               hargaSaat: it.hargaSaat, // selling price entered per order
+              keterangan: it.keterangan ?? null,
               // cost snapshot: from the product for a stock item, or the typed
               // HPP for a dropship item.
               modalSaat: it.produkId
@@ -173,6 +175,7 @@ export async function createPesanan(
             create: pakets.map((pk) => ({
               nama: pk.nama,
               harga: pk.harga,
+              keterangan: pk.keterangan ?? null,
               komponen: {
                 create: pk.komponen.map((k) => ({
                   produkId: k.produkId,
@@ -246,13 +249,35 @@ export async function updatePesanan(
 
   const existing = await prisma.pesanan.findUnique({
     where: { id },
+    // Ordered by id (cuids sort by creation time) so the position-based
+    // keterangan carry-over below lines up with the order the API returned
+    // the lines in — pesananInclude uses the same ordering.
     include: {
-      items: true,
-      pakets: { include: { komponen: true } },
+      items: { orderBy: { id: "asc" } },
+      pakets: { orderBy: { id: "asc" }, include: { komponen: true } },
       pembayaran: true,
     },
   });
   if (!existing) return fail("Pesanan tidak ditemukan.", 404);
+
+  // Lines are deleted and recreated below, so a caller that doesn't send
+  // `keterangan` at all (an APK built before the field existed) would wipe
+  // every note on the order. For such lines, carry the old note over from the
+  // line at the same position — but only if it's still recognizably the same
+  // line (same product / dropship name / paket name).
+  items.forEach((it, i) => {
+    if (it.keterangan !== undefined) return;
+    const old = existing.items[i];
+    it.keterangan =
+      old && old.produkId === it.produkId && (it.produkId || old.namaManual === it.namaManual)
+        ? old.keterangan
+        : null;
+  });
+  pakets.forEach((pk, i) => {
+    if (pk.keterangan !== undefined) return;
+    const old = existing.pakets[i];
+    pk.keterangan = old && old.nama === pk.nama ? old.keterangan : null;
+  });
 
   const oldNeeds = stockNeeds(existing);
   const newNeeds = stockNeeds({
@@ -295,6 +320,7 @@ export async function updatePesanan(
               namaManual: it.namaManual,
               jumlah: it.jumlah,
               hargaSaat: it.hargaSaat,
+              keterangan: it.keterangan ?? null,
               modalSaat: it.produkId
                 ? produkById.get(it.produkId)!.hargaModal
                 : it.modalManual,
@@ -304,6 +330,7 @@ export async function updatePesanan(
             create: pakets.map((pk) => ({
               nama: pk.nama,
               harga: pk.harga,
+              keterangan: pk.keterangan ?? null,
               komponen: {
                 create: pk.komponen.map((k) => ({
                   produkId: k.produkId,

@@ -12,11 +12,13 @@ export async function getPesananListView() {
       orderBy: { createdAt: "desc" },
       include: {
         items: {
+          orderBy: { id: "asc" },
           include: {
             produk: { select: { nama: true } },
           },
         },
         pakets: {
+          orderBy: { id: "asc" },
           include: {
             komponen: {
               include: { produk: { select: { nama: true } } },
@@ -41,6 +43,7 @@ export async function getPesananListView() {
   return {
     pesanan: pesanan.map((p) => ({
       id: p.id,
+      nomor: p.nomor,
       namaCustomer: p.namaCustomer,
       noHp: p.noHp,
       status: p.status,
@@ -53,11 +56,13 @@ export async function getPesananListView() {
         jumlah: it.jumlah,
         hargaSaat: it.hargaSaat,
         modalSaat: it.modalSaat,
+        keterangan: it.keterangan,
       })),
       pakets: p.pakets.map((pk) => ({
         id: pk.id,
         nama: pk.nama,
         harga: pk.harga,
+        keterangan: pk.keterangan,
         komponen: pk.komponen.map((k) => ({
           id: k.id,
           produkId: k.produkId,

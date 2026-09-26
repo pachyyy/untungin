@@ -36,6 +36,7 @@ type ItemRow = {
   jumlah: number;
   hargaSaat: number;
   modalSaat: number;
+  keterangan: string | null;
 };
 
 type PaketKomponenRow = {
@@ -50,6 +51,7 @@ type PaketRow = {
   id: string;
   nama: string;
   harga: number;
+  keterangan: string | null;
   komponen: PaketKomponenRow[];
 };
 
@@ -63,6 +65,7 @@ type PembayaranRow = {
 
 export type PesananRow = {
   id: string;
+  nomor: number;
   namaCustomer: string;
   noHp: string | null;
   customerId: string | null;
@@ -81,6 +84,7 @@ function serializeItem(it: ItemRow, includeCost: boolean) {
     nama: it.produk?.nama ?? it.namaManual ?? "",
     jumlah: it.jumlah,
     hargaSaat: it.hargaSaat,
+    keterangan: it.keterangan,
     ...(includeCost ? { modalSaat: it.modalSaat } : {}),
   };
 }
@@ -90,6 +94,7 @@ function serializePaket(pk: PaketRow, includeCost: boolean) {
     id: pk.id,
     nama: pk.nama,
     harga: pk.harga,
+    keterangan: pk.keterangan,
     komponen: pk.komponen.map((k) => ({
       id: k.id,
       produkId: k.produkId,
@@ -117,6 +122,7 @@ export function serializePesanan(p: PesananRow, role: DeviceRole) {
 
   const base = {
     id: p.id,
+    nomor: p.nomor,
     namaCustomer: p.namaCustomer,
     noHp: p.noHp,
     customerId: p.customerId,

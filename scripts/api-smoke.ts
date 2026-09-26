@@ -148,7 +148,7 @@ async function main() {
       "/pesanan",
       {
         namaCustomer: "__SMOKE_CUSTOMER__",
-        items: [{ produkId, jumlah: 1, hargaSaat: 2000 }],
+        items: [{ produkId, jumlah: 1, hargaSaat: 2000, keterangan: "  size L  " }],
         pakets: [],
       },
       staffToken
@@ -171,6 +171,43 @@ async function main() {
     const detailOwner = await call("GET", `/pesanan/${pesananId}`, undefined, ownerToken);
     check("owner detail: untung = 1000", detailOwner.json.untung === 1000, detailOwner.json);
     check("owner detail: total = 2000", detailOwner.json.total === 2000, detailOwner.json);
+    check("detail: nomor is a number", typeof detailOwner.json.nomor === "number", detailOwner.json);
+    check(
+      "detail: item keterangan trimmed",
+      detailOwner.json.items[0]?.keterangan === "size L",
+      detailOwner.json.items[0]
+    );
+
+    // An APK built before keterangan existed never sends the key — editing
+    // an order from it must not wipe the notes.
+    const editNoKet = await call(
+      "PATCH",
+      `/pesanan/${pesananId}`,
+      { namaCustomer: "__SMOKE_CUSTOMER__", items: [{ produkId, jumlah: 1, hargaSaat: 2000 }], pakets: [] },
+      staffToken
+    );
+    check("PATCH without keterangan key 200", editNoKet.status === 200, editNoKet);
+    const afterNoKet = await call("GET", `/pesanan/${pesananId}`, undefined, staffToken);
+    check(
+      "keterangan preserved when key absent",
+      afterNoKet.json.items[0]?.keterangan === "size L",
+      afterNoKet.json.items[0]
+    );
+    await call(
+      "PATCH",
+      `/pesanan/${pesananId}`,
+      { namaCustomer: "__SMOKE_CUSTOMER__", items: [{ produkId, jumlah: 1, hargaSaat: 2000, keterangan: null }], pakets: [] },
+      staffToken
+    );
+    const afterClear = await call("GET", `/pesanan/${pesananId}`, undefined, staffToken);
+    check("keterangan cleared when sent null", afterClear.json.items[0]?.keterangan === null, afterClear.json.items[0]);
+
+    const strukSetting = await call("GET", "/struk-setting", undefined, staffToken);
+    check(
+      "staff GET /struk-setting 200 with namaToko",
+      strukSetting.status === 200 && typeof strukSetting.json?.namaToko === "string",
+      strukSetting
+    );
 
     // --------------------------------- concurrent stock guard (last unit)
     const raceProduk = await call(

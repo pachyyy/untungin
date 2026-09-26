@@ -9,17 +9,17 @@ datasource db {
 }
 
 model Produk {
-  id          String             @id @default(cuid())
-  nama        String
-  supplierId  String
-  supplier    Supplier           @relation(fields: [supplierId], references: [id])
-  hargaModal  Int
-  stok        Int                @default(0)
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  items       PesananItem[]
-  paketItems  PesananPaketItem[]
-  restock     Restock[]
+  id         String             @id @default(cuid())
+  nama       String
+  supplierId String
+  supplier   Supplier           @relation(fields: [supplierId], references: [id])
+  hargaModal Int
+  stok       Int                @default(0)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  items      PesananItem[]
+  paketItems PesananPaketItem[]
+  restock    Restock[]
 
   @@index([supplierId])
 }
@@ -48,6 +48,11 @@ model Supplier {
 
 model Pesanan {
   id           String         @id @default(cuid())
+  // Human-facing nota number printed on the struk (formatted with
+  // StrukSetting.prefixNota, e.g. "INV-0042"). Sequential, never reused —
+  // deleting an order leaves a gap. Existing rows were renumbered 1..N by
+  // createdAt via scripts/backfill-nomor-nota.ts.
+  nomor        Int            @unique @default(autoincrement())
   namaCustomer String
   noHp         String?
   customerId   String?
@@ -70,7 +75,7 @@ model Pesanan {
   // SetNull rather than Cascade/Restrict: revoking or removing a Device must
   // never touch, let alone delete, the orders it created.
   createdByDeviceId String?
-  createdByDevice   Device?  @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
+  createdByDevice   Device? @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([status, createdAt])
@@ -98,7 +103,8 @@ model PesananItem {
   namaManual String? // item name typed by hand; only set when produkId is null
   jumlah     Int
   hargaSaat  Int // snapshot harga jual saat transaksi
-  modalSaat  Int @default(0) // snapshot produk.hargaModal saat transaksi, or the typed HPP for a dropship item
+  modalSaat  Int     @default(0) // snapshot produk.hargaModal saat transaksi, or the typed HPP for a dropship item
+  keterangan String? // optional free-text note (e.g. "warna merah, size L"), printed on the struk
 
   @@index([pesananId])
   @@index([produkId])
@@ -106,12 +112,13 @@ model PesananItem {
 
 // A bundle line within an order: several products combined, sold at one price.
 model PesananPaket {
-  id        String             @id @default(cuid())
-  pesananId String
-  pesanan   Pesanan            @relation(fields: [pesananId], references: [id], onDelete: Cascade)
-  nama      String             @default("Paket")
-  harga     Int // bundle selling price for the whole paket
-  komponen  PesananPaketItem[]
+  id         String             @id @default(cuid())
+  pesananId  String
+  pesanan    Pesanan            @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  nama       String             @default("Paket")
+  harga      Int // bundle selling price for the whole paket
+  keterangan String? // optional free-text note for the whole paket, printed on the struk
+  komponen   PesananPaketItem[]
 
   @@index([pesananId])
 }
@@ -123,7 +130,7 @@ model PesananPaketItem {
   produkId  String
   produk    Produk       @relation(fields: [produkId], references: [id])
   pcs       Int // how many pcs of this product are in the paket
-  modalSaat Int @default(0) // snapshot produk.hargaModal saat transaksi
+  modalSaat Int          @default(0) // snapshot produk.hargaModal saat transaksi
 
   @@index([paketId])
   @@index([produkId])
@@ -131,20 +138,20 @@ model PesananPaketItem {
 
 // One payment against an order (single full payment, or one installment).
 model Pembayaran {
-  id        String    @id @default(cuid())
+  id        String   @id @default(cuid())
   pesananId String
-  pesanan   Pesanan   @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  pesanan   Pesanan  @relation(fields: [pesananId], references: [id], onDelete: Cascade)
   tanggal   DateTime
-  metode    String?   // "Cash" | "Transfer" | "QRIS" | "Lainnya"
+  metode    String? // "Cash" | "Transfer" | "QRIS" | "Lainnya"
   jumlah    Int
   jenis     String // "bayar" (single full payment) | "cicilan"
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Which mobile device recorded this payment — null for the web app, same
   // reasoning as Pesanan.createdByDeviceId above.
   createdByDeviceId String?
-  createdByDevice   Device?  @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
+  createdByDevice   Device? @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
 
   @@index([pesananId, tanggal])
   @@index([createdByDeviceId])
@@ -156,9 +163,9 @@ model Pembayaran {
 // row would null out createdByDeviceId on every order/payment it made (see
 // onDelete: SetNull above), destroying attribution history for no reason.
 model Device {
-  id           String @id @default(cuid())
-  nama         String // owner-chosen label, e.g. "HP Rina"
-  role         String // "owner" | "staff"
+  id   String @id @default(cuid())
+  nama String // owner-chosen label, e.g. "HP Rina"
+  role String // "owner" | "staff"
 
   // SHA-256 of the *current* refresh token — never the token itself.
   // refreshTokenIssuedAt anchors the 60-day validity window (lib/api/auth.ts):
@@ -197,4 +204,24 @@ model EnrollCode {
   expiresAt DateTime
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+// Customization for the receipt image ("Cetak Struk") — a single row, id
+// "default", edited from Settings → Edit Struk. Read via getStrukSetting()
+// (lib/services/struk.ts), which creates it with these defaults on first use.
+model StrukSetting {
+  id                     String   @id @default("default")
+  namaToko               String   @default("Untungin")
+  logo                   String? // small data:image/... URL, resized client-side before upload
+  tagline                String?
+  alamat                 String?
+  noWa                   String?
+  sosmed                 String?
+  infoPembayaran         String? // e.g. "BCA 123456 a.n. Budi" — multi-line
+  footer                 String? // thank-you / return policy — multi-line
+  prefixNota             String   @default("INV-")
+  ukuranDefault          String   @default("80mm") // "80mm" | "a5"
+  tampilkanStempel       Boolean  @default(true) // LUNAS / BELUM LUNAS stamp
+  tampilkanKomponenPaket Boolean  @default(true) // list what's inside each paket
+  updatedAt              DateTime @updatedAt
 }

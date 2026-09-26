@@ -17,6 +17,21 @@
  * extraction is not the place to change it.
  */
 
+export const KETERANGAN_MAX = 200;
+
+/**
+ * An optional per-line note. `undefined` (the key is absent from the raw
+ * entry) is deliberately distinct from `null` (sent but empty): an installed
+ * APK built before this field existed never sends the key, and updatePesanan
+ * treats `undefined` as "keep what the line already had" instead of wiping it.
+ */
+function normalizeKeterangan(entry: unknown): string | null | undefined {
+  if (!entry || typeof entry !== "object" || !("keterangan" in entry)) return undefined;
+  const v = (entry as { keterangan?: unknown }).keterangan;
+  if (v === null || v === undefined) return null;
+  return String(v).trim().slice(0, KETERANGAN_MAX) || null;
+}
+
 // produkId set = stock item (decrements Produk.stok). produkId null = dropship
 // item typed directly on the order: namaManual + modalManual carry what a
 // Produk record would otherwise supply, and no stock is touched.
@@ -26,9 +41,15 @@ export type ItemInput = {
   jumlah: number;
   hargaSaat: number;
   modalManual: number;
+  keterangan: string | null | undefined;
 };
 export type PaketKomponenInput = { produkId: string; pcs: number };
-export type PaketInput = { nama: string; harga: number; komponen: PaketKomponenInput[] };
+export type PaketInput = {
+  nama: string;
+  harga: number;
+  keterangan: string | null | undefined;
+  komponen: PaketKomponenInput[];
+};
 
 export function normalizeItems(raw: unknown): ItemInput[] {
   try {
@@ -44,6 +65,7 @@ export function normalizeItems(raw: unknown): ItemInput[] {
           jumlah: Math.floor(Number(it.jumlah)),
           hargaSaat: Math.floor(Number(it.hargaSaat)),
           modalManual: Math.floor(Number(it.modalManual)),
+          keterangan: normalizeKeterangan(it),
         };
       })
       .filter((it) => {
@@ -70,6 +92,7 @@ export function normalizePakets(raw: unknown): PaketInput[] {
       .map((pk) => ({
         nama: String(pk.nama ?? "").trim() || "Paket",
         harga: Math.floor(Number(pk.harga)),
+        keterangan: normalizeKeterangan(pk),
         komponen: Array.isArray(pk.komponen)
           ? pk.komponen
               .map((k: unknown) => {

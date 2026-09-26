@@ -1,4 +1,7 @@
-import { LogOut } from "lucide-react";
+import Link from "next/link";
+import { LogOut, Receipt } from "lucide-react";
+import { Button } from "@/components/ui/Button";
+import { getStrukSetting } from "@/lib/services/struk";
 import { logoutAction } from "@/lib/actions/auth";
 import { listDevices } from "@/lib/services/devices";
 import { formatTanggal } from "@/lib/format";
@@ -10,7 +13,7 @@ export const metadata = { title: "Pengaturan · Untungin" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const devicesResult = await listDevices();
+  const [devicesResult, struk] = await Promise.all([listDevices(), getStrukSetting()]);
   const devices = devicesResult.ok ? devicesResult.data : [];
 
   return (
@@ -28,6 +31,28 @@ export default async function SettingsPage() {
           </p>
         </div>
         <DesignModeToggle />
+      </div>
+
+      <div className="glass-panel space-y-4 rounded-[20px] p-5">
+        <div>
+          <h2 className="text-display font-bold text-glass-ink">Struk</h2>
+          <p className="text-sm text-glass-ink-dim">
+            Atur tampilan struk yang dibagikan dari halaman pesanan.
+          </p>
+        </div>
+        <div className="rounded-[14px] bg-panel-strong px-3 py-2.5 text-sm">
+          <p className="truncate font-bold text-glass-ink">{struk.namaToko}</p>
+          <p className="text-xs text-glass-ink-dim">
+            Ukuran default {struk.ukuranDefault === "a5" ? "Nota A5" : "Struk 80mm"} · Nomor{" "}
+            {struk.prefixNota}0001
+          </p>
+        </div>
+        <Button asChild variant="outline" className="w-full">
+          <Link href="/settings/struk">
+            <Receipt className="h-4 w-4" />
+            Edit Struk
+          </Link>
+        </Button>
       </div>
 
       <div className="glass-panel space-y-4 rounded-[20px] p-5">

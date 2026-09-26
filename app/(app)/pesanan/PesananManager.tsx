@@ -20,7 +20,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/Command";
-import { formatRupiah } from "@/lib/format";
+import { formatRupiah, formatNomorNota } from "@/lib/format";
 import { todayJakarta } from "@/lib/date";
 import { useToast } from "@/components/ui/Toast";
 import {
@@ -37,6 +37,7 @@ import {
   ChevronLeft,
   Pencil,
   Plus,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createPesanan, updatePesanan, deletePesanan } from "@/lib/actions/pesanan";
@@ -45,6 +46,9 @@ import {
   hapusPembayaran,
   tandaiLunas,
 } from "@/lib/actions/pembayaran";
+import type { StrukSettingData } from "@/lib/services/struk";
+import { StrukModal } from "./StrukModal";
+import { KETERANGAN_MAX } from "@/lib/services/pesanan-input";
 
 type ItemRow = {
   id: string;
@@ -53,6 +57,7 @@ type ItemRow = {
   jumlah: number;
   hargaSaat: number;
   modalSaat: number;
+  keterangan: string | null;
 };
 type PaketKomponenRow = {
   id: string;
@@ -65,6 +70,7 @@ type PaketRow = {
   id: string;
   nama: string;
   harga: number;
+  keterangan: string | null;
   komponen: PaketKomponenRow[];
 };
 type PembayaranRow = {
@@ -77,6 +83,7 @@ type PembayaranRow = {
 };
 type PesananRow = {
   id: string;
+  nomor: number;
   namaCustomer: string;
   noHp: string | null;
   status: string;
@@ -103,11 +110,13 @@ export function PesananManager({
   pesanan,
   produk,
   customers,
+  strukSetting,
   openNew,
 }: {
   pesanan: PesananRow[];
   produk: ProdukOpt[];
   customers: CustomerOpt[];
+  strukSetting: StrukSettingData;
   openNew: boolean;
 }) {
   const router = useRouter();
@@ -122,6 +131,7 @@ export function PesananManager({
   const [editingOrder, setEditingOrder] = useState<PesananRow | null>(null);
   const [confirmDel, setConfirmDel] = useState<PesananRow | null>(null);
   const [payingOrder, setPayingOrder] = useState<PesananRow | null>(null);
+  const [strukOrder, setStrukOrder] = useState<PesananRow | null>(null);
 
   useEffect(() => {
     if (openNew) {
@@ -160,7 +170,9 @@ export function PesananManager({
       .filter((p) => {
         if (filter !== "semua" && p.status !== filter) return false;
         if (!q) return true;
-        const namaMatch = p.namaCustomer.toLowerCase().includes(q);
+        const namaMatch =
+          p.namaCustomer.toLowerCase().includes(q) ||
+          formatNomorNota(strukSetting.prefixNota, p.nomor).toLowerCase().includes(q);
         const hpMatch = (p.noHp ?? "").toLowerCase().includes(q);
         const itemMatch = p.items.some((it) => it.nama.toLowerCase().includes(q));
         const paketMatch = p.pakets.some(
@@ -177,7 +189,7 @@ export function PesananManager({
         const cmp = a.createdAtIso.localeCompare(b.createdAtIso);
         return dateSort === "asc" ? cmp : -cmp;
       });
-  }, [filter, query, pesanan, dateSort]);
+  }, [filter, query, pesanan, dateSort, strukSetting.prefixNota]);
 
   const selected = pesanan.find((p) => p.id === selectedId) ?? null;
 
@@ -286,6 +298,8 @@ export function PesananManager({
           <PesananDetail
             key={selected.id}
             p={selected}
+            prefixNota={strukSetting.prefixNota}
+            onPrint={() => setStrukOrder(selected)}
             onBack={clearSelection}
             onEdit={() => openEditForm(selected)}
             onDelete={() => setConfirmDel(selected)}
@@ -321,6 +335,12 @@ export function PesananManager({
         }}
       />
 
+      <StrukModal
+        order={strukOrder}
+        setting={strukSetting}
+        onClose={() => setStrukOrder(null)}
+      />
+
       <PaymentModal
         key={payingOrder?.id}
         row={payingOrder}
@@ -333,12 +353,16 @@ export function PesananManager({
 
 function PesananDetail({
   p,
+  prefixNota,
+  onPrint,
   onBack,
   onEdit,
   onDelete,
   onPay,
 }: {
   p: PesananRow;
+  prefixNota: string;
+  onPrint: () => void;
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -363,7 +387,7 @@ function PesananDetail({
             {p.namaCustomer}
           </h2>
           <p className="text-data mt-0.5 text-sm text-glass-ink-dim">
-            {p.tanggal}
+            {formatNomorNota(prefixNota, p.nomor)} · {p.tanggal}
             {p.noHp ? ` · ${p.noHp}` : ""}
           </p>
         </div>
@@ -382,18 +406,25 @@ function PesananDetail({
 
       <ul className="space-y-1.5 text-sm">
         {p.items.map((it) => (
-          <li key={it.id} className="flex justify-between gap-2 rounded-[12px] bg-panel px-3 py-2">
-            <span className="min-w-0 truncate text-glass-ink">
-              {!it.produkId && (
-                <span className="badge-warning text-display mr-1 rounded bg-glass-warning/15 px-1 text-[10px] font-bold uppercase text-glass-warning">
-                  Dropship
-                </span>
-              )}
-              {it.nama} <span className="text-data text-glass-ink-faint">×{it.jumlah}</span>
-            </span>
-            <span className="text-data shrink-0 text-glass-ink-dim">
-              {formatRupiah(it.hargaSaat * it.jumlah)}
-            </span>
+          <li key={it.id} className="rounded-[12px] bg-panel px-3 py-2">
+            <div className="flex justify-between gap-2">
+              <span className="min-w-0 truncate text-glass-ink">
+                {!it.produkId && (
+                  <span className="badge-warning text-display mr-1 rounded bg-glass-warning/15 px-1 text-[10px] font-bold uppercase text-glass-warning">
+                    Dropship
+                  </span>
+                )}
+                {it.nama} <span className="text-data text-glass-ink-faint">×{it.jumlah}</span>
+              </span>
+              <span className="text-data shrink-0 text-glass-ink-dim">
+                {formatRupiah(it.hargaSaat * it.jumlah)}
+              </span>
+            </div>
+            {it.keterangan && (
+              <p className="mt-0.5 whitespace-pre-line break-words text-xs text-glass-ink-dim">
+                {it.keterangan}
+              </p>
+            )}
           </li>
         ))}
         {p.pakets.map((pk) => (
@@ -410,6 +441,11 @@ function PesananDetail({
             <p className="mt-0.5 truncate text-xs text-glass-ink-faint">
               {pk.komponen.map((k) => `${k.nama} ×${k.pcs}`).join(" + ")}
             </p>
+            {pk.keterangan && (
+              <p className="mt-0.5 whitespace-pre-line break-words text-xs text-glass-ink-dim">
+                {pk.keterangan}
+              </p>
+            )}
           </li>
         ))}
       </ul>
@@ -449,6 +485,10 @@ function PesananDetail({
         <Button onClick={onPay}>
           {p.status === "belum_bayar" ? "Catat Bayar" : "Kelola Pembayaran"}
         </Button>
+        <Button variant="outline" onClick={onPrint}>
+          <Receipt className="h-4 w-4" />
+          Cetak Struk
+        </Button>
         <Button variant="outline" onClick={onEdit}>
           Edit
         </Button>
@@ -468,9 +508,10 @@ type DraftItem = {
   modal: string;
   jumlah: number;
   harga: string;
+  keterangan: string;
 };
 type DraftKomp = { produkId: string; pcs: number };
-type DraftPaket = { nama: string; harga: string; komponen: DraftKomp[] };
+type DraftPaket = { nama: string; harga: string; keterangan: string; komponen: DraftKomp[] };
 
 function PesananFormModal({
   open,
@@ -500,6 +541,7 @@ function PesananFormModal({
           modal: it.produkId ? "" : String(it.modalSaat),
           jumlah: it.jumlah,
           harga: String(it.hargaSaat),
+          keterangan: it.keterangan ?? "",
         }))
       : []
   );
@@ -508,6 +550,7 @@ function PesananFormModal({
       ? editing.pakets.map((pk) => ({
           nama: pk.nama,
           harga: String(pk.harga),
+          keterangan: pk.keterangan ?? "",
           komponen: pk.komponen.map((k) => ({
             produkId: k.produkId,
             pcs: k.pcs,
@@ -546,8 +589,8 @@ function PesananFormModal({
   function addItem() {
     setItems((prev) => [
       produk.length > 0
-        ? { produkId: produk[0].id, namaManual: "", modal: "", jumlah: 1, harga: "" }
-        : { produkId: null, namaManual: "", modal: "", jumlah: 1, harga: "" },
+        ? { produkId: produk[0].id, namaManual: "", modal: "", jumlah: 1, harga: "", keterangan: "" }
+        : { produkId: null, namaManual: "", modal: "", jumlah: 1, harga: "", keterangan: "" },
       ...prev,
     ]);
   }
@@ -564,7 +607,7 @@ function PesananFormModal({
   function addPaket() {
     if (produk.length === 0) return;
     setPakets((prev) => [
-      { nama: "", harga: "", komponen: [{ produkId: produk[0].id, pcs: 1 }] },
+      { nama: "", harga: "", keterangan: "", komponen: [{ produkId: produk[0].id, pcs: 1 }] },
       ...prev,
     ]);
   }
@@ -621,6 +664,7 @@ function PesananFormModal({
               jumlah: it.jumlah,
               hargaSaat: itemHarga(it),
               modalManual: 0,
+              keterangan: it.keterangan.trim() || null,
             }
           : {
               produkId: null,
@@ -628,6 +672,7 @@ function PesananFormModal({
               jumlah: it.jumlah,
               hargaSaat: itemHarga(it),
               modalManual: itemModal(it),
+              keterangan: it.keterangan.trim() || null,
             }
       )
       .filter((it) =>
@@ -646,6 +691,7 @@ function PesananFormModal({
     const cleanPakets = pakets.map((pk) => ({
       nama: pk.nama.trim() || "Paket",
       harga: paketHarga(pk),
+      keterangan: pk.keterangan.trim() || null,
       komponen: pk.komponen.filter((k) => k.produkId && k.pcs > 0),
     }));
 
@@ -855,6 +901,13 @@ function PesananFormModal({
                         />
                       </div>
                     )}
+                    <Input
+                      className="mt-2 h-10 text-sm"
+                      placeholder="Keterangan (opsional), cth: warna merah, size L"
+                      maxLength={KETERANGAN_MAX}
+                      value={it.keterangan}
+                      onChange={(e) => updateItem(idx, { keterangan: e.target.value })}
+                    />
                     <div className="mt-1 flex justify-between px-1 text-xs text-glass-ink-faint">
                       <span>
                         {isDropship
@@ -913,6 +966,13 @@ function PesananFormModal({
                         Hapus paket
                       </button>
                     </div>
+                    <Input
+                      className="mb-2 h-10 text-sm"
+                      placeholder="Keterangan paket (opsional)"
+                      maxLength={KETERANGAN_MAX}
+                      value={pk.keterangan}
+                      onChange={(e) => updatePaket(pi, { keterangan: e.target.value })}
+                    />
 
                     <div className="space-y-2">
                       {pk.komponen.map((k, ki) => {
