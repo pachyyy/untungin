@@ -5,10 +5,10 @@ function GlassSkeleton({ className }: { className?: string }) {
 export default function LaporanLoading() {
   return (
     <div className="space-y-4">
-      <div className="flex gap-1.5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <GlassSkeleton key={i} className="h-8 w-20 rounded-full" />
-        ))}
+      <div className="flex items-center justify-between">
+        <GlassSkeleton className="h-9 w-9 rounded-full" />
+        <GlassSkeleton className="h-6 w-32 rounded-full" />
+        <GlassSkeleton className="h-9 w-9 rounded-full" />
       </div>
       <div className="glass-panel h-[128px] rounded-[22px] p-5">
         <GlassSkeleton className="h-4 w-28" />

@@ -4,6 +4,7 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -20,7 +21,14 @@ function compact(n: number): string {
   return String(n);
 }
 
-export function LaporanChart({ data }: { data: Point[] }) {
+export function LaporanChart({
+  data,
+  activeLabel,
+}: {
+  data: Point[];
+  /** Label of the bar to emphasize (the selected month); others are dimmed. */
+  activeLabel?: string;
+}) {
   const { mode } = useDesignMode();
   const brutalist = mode === "brutalist";
   const minimal = mode === "minimal";
@@ -92,7 +100,14 @@ export function LaporanChart({ data }: { data: Point[] }) {
             strokeWidth={brutalist ? 2 : 0}
             radius={brutalist ? [0, 0, 0, 0] : minimal ? [4, 4, 0, 0] : [6, 6, 0, 0]}
             maxBarSize={44}
-          />
+          >
+            {data.map((d) => (
+              <Cell
+                key={d.label}
+                fillOpacity={activeLabel && d.label !== activeLabel ? 0.35 : 1}
+              />
+            ))}
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -4,9 +4,10 @@ import { serializeLaporan } from "@/lib/api/serialize";
 import { monthStartJakarta, toDateOnlyJakarta, parseDateOnlyJakarta } from "@/lib/date";
 import { fromGuardFailure, jsonOk } from "@/lib/api/respond";
 
-/** Owner only. `from`/`to` default to the same 6-month trailing window the
- * web's Laporan page defaults to (see app/(app)/laporan/page.tsx) when
- * omitted, so "no filter" means the same thing on both. */
+/** Owner only. `from`/`to` default to a 6-month trailing window when
+ * omitted. Orders fall in the range by the date they became lunas
+ * (tanggalLunas in lib/services/laporan.ts), not createdAt — the same rule
+ * as the web's month view, which uses getLaporanBulan instead. */
 export async function GET(req: Request) {
   const guard = await requireDevice(req, { role: "owner" });
   if (!guard.ok) return fromGuardFailure(guard);

@@ -1,35 +1,33 @@
-import { formatRupiah } from "@/lib/format";
-import { monthStartJakarta, toDateOnlyJakarta, parseDateOnlyJakarta } from "@/lib/date";
-import { getLaporanData } from "@/lib/services/laporan";
+import { formatRupiah, formatBulanPanjang } from "@/lib/format";
+import { monthKeyJakarta } from "@/lib/date";
+import { getLaporanBulan } from "@/lib/services/laporan";
 import { LaporanChart } from "./LaporanChart";
-import { DateRangeFilter } from "./DateRangeFilter";
+import { MonthPicker } from "./MonthPicker";
 
 export const dynamic = "force-dynamic";
 
 export default async function LaporanPage({
   searchParams,
 }: {
-  searchParams: Promise<{ from?: string; to?: string }>;
+  searchParams: Promise<{ bulan?: string }>;
 }) {
   const sp = await searchParams;
 
-  const now = new Date();
-  const defaultFrom = monthStartJakarta(now, 5);
-  const fromStr = sp.from || toDateOnlyJakarta(defaultFrom);
-  const toStr = sp.to || toDateOnlyJakarta(now);
+  // "YYYY-MM"; anything malformed falls back to the current Jakarta month.
+  const bulan =
+    sp.bulan && /^\d{4}-(0[1-9]|1[0-2])$/.test(sp.bulan) ? sp.bulan : monthKeyJakarta(new Date());
 
-  const from = parseDateOnlyJakarta(fromStr, "start");
-  const to = parseDateOnlyJakarta(toStr, "end");
-
-  const { chartData, totOmzet, totModal, totUntung, topProduk } =
-    await getLaporanData(from, to);
+  const { chartData, activeLabel, totOmzet, totModal, totUntung, topProduk } =
+    await getLaporanBulan(bulan);
 
   return (
     <div className="space-y-4">
-      <DateRangeFilter from={fromStr} to={toStr} />
+      <MonthPicker bulan={bulan} />
 
       <div className="glass-hero rounded-[22px] p-5">
-        <p className="text-display text-[13px] font-semibold text-glass-ink-dim">Untung periode ini</p>
+        <p className="text-display text-[13px] font-semibold text-glass-ink-dim">
+          Untung {formatBulanPanjang(bulan)}
+        </p>
         <p className="text-data mt-2 text-[38px] font-extrabold leading-none text-glass-ink">
           {formatRupiah(totUntung)}
         </p>
@@ -58,19 +56,18 @@ export default async function LaporanPage({
 
       <div className="glass-panel rounded-[20px] p-5">
         <h2 className="text-display mb-3 font-bold text-glass-ink">Profit per bulan</h2>
-        {chartData.length === 0 ? (
-          <p className="py-8 text-center text-sm text-glass-ink-faint">
-            Belum ada data pada rentang ini.
-          </p>
-        ) : (
-          <LaporanChart data={chartData} />
-        )}
+        <LaporanChart data={chartData} activeLabel={activeLabel} />
+        <p className="mt-2 text-xs text-glass-ink-faint">
+          Pesanan dihitung di bulan saat lunas, bukan saat dibuat.
+        </p>
       </div>
 
       <div className="glass-panel rounded-[20px] p-5">
         <h2 className="text-display mb-3 font-bold text-glass-ink">Produk terlaris</h2>
         {topProduk.length === 0 ? (
-          <p className="py-4 text-center text-sm text-glass-ink-faint">Belum ada data.</p>
+          <p className="py-4 text-center text-sm text-glass-ink-faint">
+            Belum ada pesanan lunas bulan ini.
+          </p>
         ) : (
           <ol className="space-y-2">
             {topProduk.map((p, i) => (

@@ -43,6 +43,28 @@ export function formatBulanKey(key: string): string {
   return `${BULAN[m - 1]} ${y}`;
 }
 
+/** Full month names, January first. Also exported for month pickers. */
+export const BULAN_PANJANG = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+/** e.g. "Juli 2026" for a "2026-07" key */
+export function formatBulanPanjang(key: string): string {
+  const [y, m] = key.split("-").map(Number);
+  return `${BULAN_PANJANG[m - 1]} ${y}`;
+}
+
 /** Nota number as printed on the struk, e.g. ("INV-", 42) -> "INV-0042". Zero-padded to at least 4 digits. */
 export function formatNomorNota(prefix: string, nomor: number): string {
   return `${prefix}${String(nomor).padStart(4, "0")}`;
