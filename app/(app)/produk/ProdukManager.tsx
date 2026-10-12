@@ -352,6 +352,9 @@ function ProdukFormModal({
     >
       <form action={handleSubmit} className="space-y-3">
         {editing && <input type="hidden" name="id" value={editing.id} />}
+        {/* The stok the form was opened with — lets the server apply only the
+            user's change, not overwrite sales made while the form was open. */}
+        {editing && <input type="hidden" name="stokAwal" value={editing.stok} />}
         <div>
           <Label htmlFor="nama">Nama produk</Label>
           <Input

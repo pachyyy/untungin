@@ -30,6 +30,7 @@ export async function updateProduk(formData: FormData): Promise<ActionResult> {
   const result = await produkService.updateProduk({
     id: String(formData.get("id") ?? ""),
     ...readProdukForm(formData),
+    stokAwal: formData.get("stokAwal"),
   });
   if (result.ok) revalidateProdukWrite();
   return toActionResult(result);

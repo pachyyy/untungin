@@ -63,6 +63,12 @@ export async function tambahPembayaran(
   const tanggal = tanggalStr ? parseDateOnlyJakarta(tanggalStr, "start") : new Date();
   if (Number.isNaN(tanggal.getTime())) return fail("Tanggal tidak valid.");
 
+  const pesanan = await prisma.pesanan.findUnique({
+    where: { id: pesananId },
+    select: { id: true },
+  });
+  if (!pesanan) return fail("Pesanan tidak ditemukan.", 404);
+
   let createdId = "";
   await prisma.$transaction(async (tx) => {
     const created = await tx.pembayaran.create({

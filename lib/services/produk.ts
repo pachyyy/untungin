@@ -70,7 +70,14 @@ export async function createProduk(
   return ok({ id: created.id });
 }
 
-export type UpdateProdukInput = ProdukFormInput & { id: string };
+export type UpdateProdukInput = ProdukFormInput & {
+  id: string;
+  /** The stok value the edit form was opened with. When given, only the
+   * user's change (stok - stokAwal) is applied, so orders placed while the
+   * form was open aren't overwritten by its stale number. Absent (older
+   * APKs) = the submitted stok is written as-is. */
+  stokAwal?: unknown;
+};
 
 export async function updateProduk(
   input: UpdateProdukInput,
@@ -88,10 +95,39 @@ export async function updateProduk(
   const supplier = await resolveSupplierId(input);
   if (typeof supplier !== "string") return fail(supplier.error);
 
-  await prisma.produk.update({
-    where: { id },
-    data: { nama, hargaModal, stok, supplierId: supplier },
+  const stokAwal =
+    input.stokAwal === undefined || input.stokAwal === null || input.stokAwal === ""
+      ? null
+      : parseIntField(input.stokAwal, { min: 0 });
+
+  if (stokAwal === null) {
+    await prisma.produk.update({
+      where: { id },
+      data: { nama, hargaModal, stok, supplierId: supplier },
+    });
+    return ok({ id });
+  }
+
+  const delta = stok - stokAwal;
+  const res = await prisma.produk.updateMany({
+    // A negative delta must not drive stok below zero if orders consumed
+    // stock since the form was opened.
+    where: { id, ...(delta < 0 ? { stok: { gte: -delta } } : {}) },
+    data: {
+      nama,
+      hargaModal,
+      supplierId: supplier,
+      ...(delta !== 0 ? { stok: { increment: delta } } : {}),
+    },
   });
+  if (res.count === 0) {
+    const exists = await prisma.produk.findUnique({ where: { id }, select: { stok: true } });
+    if (!exists) return fail("Produk tidak ditemukan.", 404);
+    return fail(
+      `Stok sudah berubah sejak form dibuka (sekarang ${exists.stok}). Buka ulang lalu coba lagi.`,
+      409
+    );
+  }
   return ok({ id });
 }
 

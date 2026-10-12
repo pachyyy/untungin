@@ -14,7 +14,7 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!body || typeof body !== "object") {
     return jsonError("Body permintaan tidak valid.", 400);
   }
-  const { nama, hargaModal, stok, supplierId, supplierNama, supplierKontak } =
+  const { nama, hargaModal, stok, stokAwal, supplierId, supplierNama, supplierKontak } =
     body as Record<string, unknown>;
 
   const result = await updateProduk({
@@ -22,6 +22,8 @@ export async function PATCH(req: Request, { params }: Params) {
     nama: typeof nama === "string" ? nama : "",
     hargaModal,
     stok,
+    // Optional — APKs that don't send it keep the old absolute-stok write.
+    stokAwal,
     supplierId: typeof supplierId === "string" ? supplierId : "",
     supplierNama: typeof supplierNama === "string" ? supplierNama : undefined,
     supplierKontak: typeof supplierKontak === "string" ? supplierKontak : undefined,

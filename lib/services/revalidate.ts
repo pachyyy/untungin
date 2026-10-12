@@ -1,19 +1,15 @@
 import { revalidatePath } from "next/cache";
 
 /**
- * Path sets to revalidate after each kind of mutation, one function per
- * call site as it existed in the pre-refactor `lib/actions/*.ts` files (not
- * one function per resource — several resources revalidate a *smaller* set
- * on delete than on create/update, which looks like it may be an oversight
- * upstream, e.g. deleting a produk doesn't revalidate `/supplier` even though
- * the supplier list shows a per-supplier produk count. Preserved as-is here
- * rather than "fixed" as part of what should be a behavior-neutral
- * extraction — worth a follow-up look, not a Phase 1 change).
+ * Path sets to revalidate after each kind of mutation. Each set covers every
+ * page that displays the affected data — e.g. a produk delete also touches
+ * /supplier (per-supplier produk count), a customer delete also touches
+ * /pesanan (its customer picker).
  *
  * `revalidatePath` works the same in Server Actions and Route Handlers, so
- * both `lib/actions/*.ts` (web) and the future `app/api/v1/*` handlers
- * (mobile) call these after a successful service call — a mobile write must
- * still bust the cache for anyone looking at the web app.
+ * both `lib/actions/*.ts` (web) and the `app/api/v1/*` handlers (mobile)
+ * call these after a successful service call — a mobile write must still
+ * bust the cache for anyone looking at the web app.
  */
 
 export function revalidatePesananPaths() {
@@ -38,11 +34,11 @@ export function revalidateProdukWrite() {
   revalidatePath("/supplier");
 }
 
-/** deleteProduk — deliberately narrower than revalidateProdukWrite, see
- * module comment. */
+/** deleteProduk. */
 export function revalidateProdukDelete() {
   revalidatePath("/produk");
   revalidatePath("/dashboard");
+  revalidatePath("/supplier");
 }
 
 /** restockProduk. */
@@ -57,9 +53,10 @@ export function revalidateSupplierWrite() {
   revalidatePath("/produk");
 }
 
-/** deleteSupplier — deliberately narrower, see module comment. */
+/** deleteSupplier. */
 export function revalidateSupplierDelete() {
   revalidatePath("/supplier");
+  revalidatePath("/produk");
 }
 
 /** createCustomer / updateCustomer. (resolveCustomerId, used inside
@@ -70,9 +67,10 @@ export function revalidateCustomerWrite() {
   revalidatePath("/pesanan");
 }
 
-/** deleteCustomer — deliberately narrower, see module comment. */
+/** deleteCustomer. */
 export function revalidateCustomerDelete() {
   revalidatePath("/pelanggan");
+  revalidatePath("/pesanan");
 }
 
 /** updateStrukSetting — /pesanan reads the setting for its Cetak Struk modal

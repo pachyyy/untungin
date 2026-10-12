@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveCustomerId } from "@/lib/services/customer";
-import { STATUS_RANK } from "@/lib/calc";
+import { STATUS_RANK, totalPesanan } from "@/lib/calc";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 import {
   normalizeItems,
@@ -279,6 +279,19 @@ export async function updatePesanan(
     pk.keterangan = old && old.nama === pk.nama ? old.keterangan : null;
   });
 
+  // Lines are recreated, but a product already on this order keeps the cost
+  // snapshotted when it was first sold — otherwise any edit (even fixing the
+  // customer name) after a restock would silently rewrite historical profit
+  // with today's weighted-average hargaModal. Only products newly added by
+  // this edit take the current cost.
+  const oldItemModal = new Map<string, number>();
+  for (const it of existing.items)
+    if (it.produkId && !oldItemModal.has(it.produkId)) oldItemModal.set(it.produkId, it.modalSaat);
+  const oldKomponenModal = new Map<string, number>();
+  for (const pk of existing.pakets)
+    for (const k of pk.komponen)
+      if (!oldKomponenModal.has(k.produkId)) oldKomponenModal.set(k.produkId, k.modalSaat);
+
   const oldNeeds = stockNeeds(existing);
   const newNeeds = stockNeeds({
     items,
@@ -322,7 +335,7 @@ export async function updatePesanan(
               hargaSaat: it.hargaSaat,
               keterangan: it.keterangan ?? null,
               modalSaat: it.produkId
-                ? produkById.get(it.produkId)!.hargaModal
+                ? oldItemModal.get(it.produkId) ?? produkById.get(it.produkId)!.hargaModal
                 : it.modalManual,
             })),
           },
@@ -335,7 +348,8 @@ export async function updatePesanan(
                 create: pk.komponen.map((k) => ({
                   produkId: k.produkId,
                   pcs: k.pcs,
-                  modalSaat: produkById.get(k.produkId)!.hargaModal,
+                  modalSaat:
+                    oldKomponenModal.get(k.produkId) ?? produkById.get(k.produkId)!.hargaModal,
                 })),
               },
             })),
@@ -367,13 +381,15 @@ export async function updatePesanan(
       }
 
       // The sale price may have changed — re-derive status from what's already
-      // been paid (never auto-forces Lunas back up; that stays a manual choice
-      // via tandaiLunas, but a status can drop if the new total exceeds what
-      // was paid).
-      const newTotal = items.reduce((s, it) => s + it.hargaSaat * it.jumlah, 0) +
-        pakets.reduce((s, pk) => s + pk.harga, 0);
-      const newStatus =
-        totalDibayar <= 0 ? "belum_bayar" : totalDibayar >= newTotal ? "lunas" : "nyicil";
+      // been paid (a status can drop if the new total exceeds what was paid).
+      // An edit that leaves the total unchanged keeps a Lunas order Lunas:
+      // it may have been forced via tandaiLunas while underpaid (a write-off),
+      // and fixing e.g. the customer name must not silently undo that.
+      const newTotal = totalPesanan({ items, pakets });
+      const keepLunas = existing.status === "lunas" && newTotal === totalPesanan(existing);
+      const newStatus = keepLunas
+        ? "lunas"
+        : totalDibayar <= 0 ? "belum_bayar" : totalDibayar >= newTotal ? "lunas" : "nyicil";
       if (newStatus !== existing.status) {
         await tx.pesanan.update({
           where: { id },

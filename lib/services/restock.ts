@@ -34,24 +34,26 @@ export async function restockProduk(
 
   const produk = await prisma.produk.findUnique({
     where: { id: produkId },
-    select: { stok: true, hargaModal: true },
+    select: { id: true },
   });
   if (!produk) return fail("Produk tidak ditemukan.", 404);
 
-  const stokBaru = produk.stok + qty;
-  const hargaModalBaru = Math.round(
-    (produk.stok * produk.hargaModal + qty * hargaBeli) / stokBaru
-  );
-
-  const [, restock] = await prisma.$transaction([
-    prisma.produk.update({
-      where: { id: produkId },
-      data: { stok: stokBaru, hargaModal: hargaModalBaru },
-    }),
-    prisma.restock.create({
+  // One atomic UPDATE: Postgres evaluates every SET expression against the
+  // row's values *before* this statement, so the weighted average and the
+  // increment both see the same, current stok. Reading stok first and
+  // writing an absolute value back would drop any order placed in between
+  // (its decrement overwritten by the stale stok + qty).
+  const restock = await prisma.$transaction(async (tx) => {
+    await tx.$executeRaw`
+      UPDATE "Produk"
+      SET "hargaModal" = ROUND(("stok"::numeric * "hargaModal" + ${qty}::numeric * ${hargaBeli}) / ("stok" + ${qty})),
+          "stok" = "stok" + ${qty},
+          "updatedAt" = now()
+      WHERE "id" = ${produkId}`;
+    return tx.restock.create({
       data: { produkId, qty, hargaBeli, tanggal },
-    }),
-  ]);
+    });
+  });
 
   return ok({ id: restock.id });
 }
