@@ -218,6 +218,7 @@ model StrukSetting {
   noWa                   String?
   sosmed                 String?
   infoPembayaran         String? // e.g. "BCA 123456 a.n. Budi" — multi-line
+  qris                   String? // square (1:1) data:image/... URL, cropped client-side before upload
   footer                 String? // thank-you / return policy — multi-line
   prefixNota             String   @default("INV-")
   ukuranDefault          String   @default("80mm") // "80mm" | "a5"

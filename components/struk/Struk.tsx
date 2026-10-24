@@ -21,9 +21,12 @@ export type StrukOrder = {
 // 80mm is a thermal-roll-style strip that grows with the order; A5 keeps the
 // 148:210 page ratio as a minimum height and grows past it for long orders
 // rather than cutting anything off.
-const SIZE: Record<UkuranStruk, { width: number; minHeight?: number; pad: number; font: number }> = {
-  "80mm": { width: 400, pad: 22, font: 14 },
-  a5: { width: 560, minHeight: Math.round((560 * 210) / 148), pad: 40, font: 15 },
+const SIZE: Record<
+  UkuranStruk,
+  { width: number; minHeight?: number; pad: number; font: number; qris: number }
+> = {
+  "80mm": { width: 400, pad: 22, font: 14, qris: 120 },
+  a5: { width: 560, minHeight: Math.round((560 * 210) / 148), pad: 40, font: 15, qris: 160 },
 };
 
 // Always black on white, regardless of the app's theme — this is a picture of
@@ -168,12 +171,33 @@ export const Struk = forwardRef<
         </div>
       )}
 
-      {setting.infoPembayaran && (
+      {(setting.infoPembayaran || setting.qris) && (
         <>
           <div style={divider} />
           <div style={{ fontSize: small }}>
             <div style={{ fontWeight: 700 }}>Pembayaran</div>
-            <div style={multiline}>{setting.infoPembayaran}</div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 12 }}>
+              <div style={{ ...multiline, flex: 1, minWidth: 0 }}>{setting.infoPembayaran}</div>
+              {setting.qris && (
+                <div style={{ flexShrink: 0, textAlign: "center", marginLeft: "auto" }}>
+                  {/* The upload is cropped 1:1, but force it here too so a hand-crafted API
+                      upload can never distort the code. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element -- data: URL, captured by html-to-image */}
+                  <img
+                    src={setting.qris}
+                    alt="QRIS"
+                    style={{
+                      width: size.qris,
+                      height: size.qris,
+                      objectFit: "cover",
+                      display: "block",
+                      background: "#ffffff",
+                    }}
+                  />
+                  <div style={{ fontWeight: 700, marginTop: 2 }}>Scan QRIS</div>
+                </div>
+              )}
+            </div>
           </div>
         </>
       )}
