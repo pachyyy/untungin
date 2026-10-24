@@ -16,6 +16,7 @@ export type StrukSettingData = {
   noWa: string | null;
   sosmed: string | null;
   infoPembayaran: string | null;
+  qris: string | null;
   footer: string | null;
   prefixNota: string;
   ukuranDefault: UkuranStruk;
@@ -30,6 +31,10 @@ const SETTING_ID = "default";
 // from bloating the one row every struk render reads.
 const LOGO_MAX_CHARS = 200_000;
 
+// The QRIS is cropped to a square client-side (StrukEditor) and exported at
+// 512px; a QR code compresses far better than a photo, so this has headroom.
+const QRIS_MAX_CHARS = 300_000;
+
 const SHORT_MAX = 100;
 const LONG_MAX = 500;
 
@@ -41,6 +46,7 @@ function toData(row: {
   noWa: string | null;
   sosmed: string | null;
   infoPembayaran: string | null;
+  qris: string | null;
   footer: string | null;
   prefixNota: string;
   ukuranDefault: string;
@@ -55,6 +61,7 @@ function toData(row: {
     noWa: row.noWa,
     sosmed: row.sosmed,
     infoPembayaran: row.infoPembayaran,
+    qris: row.qris,
     footer: row.footer,
     prefixNota: row.prefixNota,
     ukuranDefault: row.ukuranDefault === "a5" ? "a5" : "80mm",
@@ -74,6 +81,7 @@ const DEFAULT_SETTING: StrukSettingData = {
   noWa: null,
   sosmed: null,
   infoPembayaran: null,
+  qris: null,
   footer: null,
   prefixNota: "INV-",
   ukuranDefault: "80mm",
@@ -94,6 +102,7 @@ export type UpdateStrukSettingInput = {
   noWa: string;
   sosmed: string;
   infoPembayaran: string;
+  qris: string | null;
   footer: string;
   prefixNota: string;
   ukuranDefault: string;
@@ -115,6 +124,13 @@ export async function updateStrukSetting(
     if (logo.length > LOGO_MAX_CHARS) return fail("Ukuran logo terlalu besar.");
   }
 
+  const qris = input.qris || null;
+  if (qris) {
+    if (!/^data:image\/(png|jpeg|webp);base64,/.test(qris))
+      return fail("Format gambar QRIS tidak valid.");
+    if (qris.length > QRIS_MAX_CHARS) return fail("Ukuran gambar QRIS terlalu besar.");
+  }
+
   const short = (v: string) => v.trim().slice(0, SHORT_MAX) || null;
   const long = (v: string) => v.trim().slice(0, LONG_MAX) || null;
   const prefixNota = input.prefixNota.trim().slice(0, 12);
@@ -127,6 +143,7 @@ export async function updateStrukSetting(
     noWa: short(input.noWa),
     sosmed: short(input.sosmed),
     infoPembayaran: long(input.infoPembayaran),
+    qris,
     footer: long(input.footer),
     prefixNota,
     ukuranDefault: input.ukuranDefault === "a5" ? "a5" : "80mm",
