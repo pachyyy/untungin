@@ -141,8 +141,8 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-      <div className="glass-panel space-y-4 rounded-[20px] p-5">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="glass-panel min-w-0 space-y-4 rounded-[20px] p-5">
         <Section title="Identitas toko">
           <Field label="Nama toko" htmlFor="namaToko">
             <Input
@@ -305,11 +305,6 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
             />
           </div>
           <Toggle
-            label="Tampilkan stempel LUNAS / BELUM LUNAS"
-            checked={s.tampilkanStempel}
-            onChange={(v) => set("tampilkanStempel", v)}
-          />
-          <Toggle
             label="Tampilkan isi paket"
             checked={s.tampilkanKomponenPaket}
             onChange={(v) => set("tampilkanKomponenPaket", v)}
@@ -336,14 +331,14 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
         }}
       />
 
-      <div className="glass-panel space-y-3 rounded-[20px] p-5 lg:sticky lg:top-4">
+      <div className="glass-panel min-w-0 space-y-3 rounded-[20px] p-5 lg:sticky lg:top-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-display font-bold text-glass-ink">Pratinjau</h2>
           <span className="text-xs text-glass-ink-faint">Contoh pesanan</span>
         </div>
         <UkuranSwitch value={previewUkuran} onChange={setPreviewUkuran} />
         <div className="rounded-[12px] bg-panel p-2">
-          <StrukPreview setting={s} order={SAMPLE_ORDER} ukuran={previewUkuran} />
+          <StrukPreview setting={s} order={SAMPLE_ORDER} ukuran={previewUkuran} stempel />
         </div>
       </div>
     </div>

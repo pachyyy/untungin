@@ -28,6 +28,9 @@ export function StrukModal({
 }) {
   const { toast } = useToast();
   const [ukuran, setUkuran] = useState<UkuranStruk>(setting.ukuranDefault);
+  // null = not asked yet: every Cetak Struk starts with the stempel prompt,
+  // after which the choice can still be flipped from the preview.
+  const [stempel, setStempel] = useState<boolean | null>(null);
   const strukRef = useRef<HTMLDivElement | null>(null);
   // The PNG is rendered ahead of time, not on tap: iOS Safari only allows
   // navigator.share() within a short window after the user's tap, and an
@@ -36,7 +39,11 @@ export function StrukModal({
   const [renderError, setRenderError] = useState(false);
 
   useEffect(() => {
-    if (!order) return;
+    setStempel(null);
+  }, [order]);
+
+  useEffect(() => {
+    if (!order || stempel === null) return;
     let cancelled = false;
     setBlob(null);
     setRenderError(false);
@@ -61,7 +68,7 @@ export function StrukModal({
       cancelled = true;
       cancelAnimationFrame(raf);
     };
-  }, [order, ukuran, setting]);
+  }, [order, ukuran, setting, stempel]);
 
   const filename = order ? `${formatNomorNota(setting.prefixNota, order.nomor)}.png` : "struk.png";
 
@@ -76,53 +83,105 @@ export function StrukModal({
   }
 
   return (
-    <Modal open={!!order} onClose={onClose} title="Cetak Struk" className="sm:max-w-lg">
-      {order && (
+    <>
+      <Modal open={!!order && stempel === null} onClose={onClose} title="Cetak Struk">
         <div className="space-y-3">
-          <div className="flex gap-1 rounded-[10px] bg-panel-strong p-0.5 text-xs font-semibold">
-            {UKURAN.map((u) => (
-              <button
-                key={u.value}
-                type="button"
-                onClick={() => setUkuran(u.value)}
-                className={cn(
-                  "flex-1 rounded-[8px] py-1.5 transition-colors",
-                  ukuran === u.value ? "bg-panel text-glass-ink" : "text-glass-ink-faint"
-                )}
-              >
-                {u.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="max-h-[55vh] overflow-y-auto rounded-[12px] bg-panel p-2">
-            <StrukPreview ref={strukRef} setting={setting} order={order} ukuran={ukuran} />
-          </div>
-
-          {renderError && (
-            <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
-              Gagal membuat gambar struk. Coba tutup dan buka lagi.
-            </p>
-          )}
-
+          <p className="text-sm text-glass-ink-dim">
+            Tampilkan stempel {order?.status === "lunas" ? "LUNAS" : "BELUM LUNAS"} di struk?
+          </p>
           <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1"
-              disabled={!blob}
-              onClick={() => blob && downloadBlob(blob, filename)}
-            >
-              <Download className="h-4 w-4" />
-              Unduh
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setStempel(false)}>
+              Tidak pakai stempel
             </Button>
-            <Button type="button" className="flex-1" disabled={!blob} onClick={handleShare}>
-              <Share2 className="h-4 w-4" />
-              {blob ? "Bagikan" : "Menyiapkan…"}
+            <Button type="button" className="flex-1" onClick={() => setStempel(true)}>
+              Pakai stempel
             </Button>
           </div>
         </div>
-      )}
-    </Modal>
+      </Modal>
+
+      <Modal
+        open={!!order && stempel !== null}
+        onClose={onClose}
+        title="Cetak Struk"
+        className="sm:max-w-lg"
+      >
+        {order && stempel !== null && (
+          <div className="space-y-3">
+            <div className="flex gap-1 rounded-[10px] bg-panel-strong p-0.5 text-xs font-semibold">
+              {UKURAN.map((u) => (
+                <button
+                  key={u.value}
+                  type="button"
+                  onClick={() => setUkuran(u.value)}
+                  className={cn(
+                    "flex-1 rounded-[8px] py-1.5 transition-colors",
+                    ukuran === u.value ? "bg-panel text-glass-ink" : "text-glass-ink-faint"
+                  )}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={stempel}
+              onClick={() => setStempel(!stempel)}
+              className="flex w-full items-center justify-between gap-3 rounded-[12px] bg-panel-strong px-3 py-2 text-left text-sm text-glass-ink"
+            >
+              <span>Stempel {order.status === "lunas" ? "LUNAS" : "BELUM LUNAS"}</span>
+              <span
+                className={cn(
+                  "relative h-6 w-10 shrink-0 rounded-full transition-colors",
+                  stempel ? "bg-glass-accent" : "bg-glass-ink-faint/40"
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
+                    stempel ? "left-[18px]" : "left-0.5"
+                  )}
+                />
+              </span>
+            </button>
+
+            <div className="max-h-[55vh] overflow-y-auto rounded-[12px] bg-panel p-2">
+              <StrukPreview
+                ref={strukRef}
+                setting={setting}
+                order={order}
+                ukuran={ukuran}
+                stempel={stempel}
+              />
+            </div>
+
+            {renderError && (
+              <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
+                Gagal membuat gambar struk. Coba tutup dan buka lagi.
+              </p>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                disabled={!blob}
+                onClick={() => blob && downloadBlob(blob, filename)}
+              >
+                <Download className="h-4 w-4" />
+                Unduh
+              </Button>
+              <Button type="button" className="flex-1" disabled={!blob} onClick={handleShare}>
+                <Share2 className="h-4 w-4" />
+                {blob ? "Bagikan" : "Menyiapkan…"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+    </>
   );
 }
