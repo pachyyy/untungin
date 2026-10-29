@@ -47,8 +47,8 @@ const multiline: CSSProperties = { whiteSpace: "pre-line", wordBreak: "break-wor
  */
 export const Struk = forwardRef<
   HTMLDivElement,
-  { setting: StrukSettingData; order: StrukOrder; ukuran: UkuranStruk }
->(function Struk({ setting, order, ukuran }, ref) {
+  { setting: StrukSettingData; order: StrukOrder; ukuran: UkuranStruk; stempel: boolean }
+>(function Struk({ setting, order, ukuran, stempel }, ref) {
   const size = SIZE[ukuran];
   const small = size.font - 2;
   const lunas = order.status === "lunas";
@@ -151,7 +151,7 @@ export const Struk = forwardRef<
         <span>{formatRupiah(totalPesanan(order))}</span>
       </div>
 
-      {setting.tampilkanStempel && (
+      {stempel && (
         <div style={{ textAlign: "center", margin: "18px 0 6px" }}>
           <span
             style={{

@@ -305,11 +305,6 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
             />
           </div>
           <Toggle
-            label="Tampilkan stempel LUNAS / BELUM LUNAS"
-            checked={s.tampilkanStempel}
-            onChange={(v) => set("tampilkanStempel", v)}
-          />
-          <Toggle
             label="Tampilkan isi paket"
             checked={s.tampilkanKomponenPaket}
             onChange={(v) => set("tampilkanKomponenPaket", v)}
@@ -343,7 +338,7 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
         </div>
         <UkuranSwitch value={previewUkuran} onChange={setPreviewUkuran} />
         <div className="rounded-[12px] bg-panel p-2">
-          <StrukPreview setting={s} order={SAMPLE_ORDER} ukuran={previewUkuran} />
+          <StrukPreview setting={s} order={SAMPLE_ORDER} ukuran={previewUkuran} stempel />
         </div>
       </div>
     </div>
