@@ -14,7 +14,7 @@ export type ProdukListItem = Prisma.ProdukGetPayload<{ include: typeof produkLis
  * hargaModal for staff. */
 export async function listProduk(): Promise<ServiceResult<ProdukListItem[]>> {
   const rows = await prisma.produk.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: { nama: "asc" },
     include: produkListInclude,
   });
   return ok(rows);
