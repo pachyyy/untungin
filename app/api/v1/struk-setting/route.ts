@@ -19,8 +19,8 @@ export async function GET(req: Request) {
  * cleared (or, for the toggles, switched off): updateStrukSetting always
  * writes every field, so without this merge an APK built before some future
  * setting existed would silently wipe it on every save — the same hazard
- * normalizeKeterangan guards against for pesanan lines. `logo: null` is an
- * explicit removal; an absent `logo` keeps the stored one. */
+ * normalizeKeterangan guards against for pesanan lines. `logo: null` (and
+ * `qris: null`) is an explicit removal; an absent key keeps the stored one. */
 export async function PATCH(req: Request) {
   const guard = await requireDevice(req, { role: "owner" });
   if (!guard.ok) return fromGuardFailure(guard);
@@ -47,6 +47,7 @@ export async function PATCH(req: Request) {
     noWa: str("noWa"),
     sosmed: str("sosmed"),
     infoPembayaran: str("infoPembayaran"),
+    qris: "qris" in b ? (typeof b.qris === "string" && b.qris ? b.qris : null) : current.qris,
     footer: str("footer"),
     prefixNota: str("prefixNota"),
     ukuranDefault: str("ukuranDefault"),

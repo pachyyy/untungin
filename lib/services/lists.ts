@@ -90,7 +90,7 @@ export async function getPesananListView() {
 export async function getProdukListView() {
   const [produk, suppliers] = await Promise.all([
     prisma.produk.findMany({
-      orderBy: { createdAt: "desc" },
+      orderBy: { nama: "asc" },
       include: {
         supplier: { select: { nama: true } },
         restock: {

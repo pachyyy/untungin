@@ -36,7 +36,9 @@ export async function getDashboardData(): Promise<DashboardData> {
       },
     }),
     prisma.produk.findMany({
-      where: { stok: { lt: STOK_MENIPIS } },
+      // Out-of-stock (0) items are deliberately left out: "menipis" is for
+      // what's about to run out, and the list is capped at 10.
+      where: { stok: { gt: 0, lt: STOK_MENIPIS } },
       orderBy: { stok: "asc" },
       take: 10,
     }),

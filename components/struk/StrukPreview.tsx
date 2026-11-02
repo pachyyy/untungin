@@ -12,7 +12,7 @@ import type { StrukSettingData, UkuranStruk } from "@/lib/services/struk";
  */
 export const StrukPreview = forwardRef<
   HTMLDivElement | null,
-  { setting: StrukSettingData; order: StrukOrder; ukuran: UkuranStruk }
+  { setting: StrukSettingData; order: StrukOrder; ukuran: UkuranStruk; stempel: boolean }
 >(function StrukPreview(props, ref) {
   const boxRef = useRef<HTMLDivElement>(null);
   const strukRef = useRef<HTMLDivElement>(null);

@@ -14,6 +14,7 @@ export async function updateStrukSettingAction(formData: FormData): Promise<Acti
     noWa: str("noWa"),
     sosmed: str("sosmed"),
     infoPembayaran: str("infoPembayaran"),
+    qris: str("qris") || null,
     footer: str("footer"),
     prefixNota: str("prefixNota"),
     ukuranDefault: str("ukuranDefault"),

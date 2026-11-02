@@ -2,11 +2,12 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, Trash2 } from "lucide-react";
+import { ImagePlus, QrCode, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { StrukPreview } from "@/components/struk/StrukPreview";
+import { QrisCropper } from "@/components/struk/QrisCropper";
 import type { StrukOrder } from "@/components/struk/Struk";
 import type { StrukSettingData, UkuranStruk } from "@/lib/services/struk";
 import { updateStrukSettingAction } from "@/lib/actions/struk";
@@ -84,6 +85,8 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
   const [s, setS] = useState<StrukSettingData>(initial);
   const [previewUkuran, setPreviewUkuran] = useState<UkuranStruk>(initial.ukuranDefault);
   const fileRef = useRef<HTMLInputElement>(null);
+  const qrisRef = useRef<HTMLInputElement>(null);
+  const [qrisFile, setQrisFile] = useState<File | null>(null);
 
   function set<K extends keyof StrukSettingData>(key: K, value: StrukSettingData[K]) {
     setS((prev) => ({ ...prev, [key]: value }));
@@ -104,6 +107,14 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
     }
   }
 
+  // The picked QRIS goes through the 1:1 cropper first; only the cropped
+  // square is ever put into the setting.
+  function handleQrisPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (file) setQrisFile(file);
+  }
+
   function handleSave() {
     setError(undefined);
     const fd = new FormData();
@@ -114,6 +125,7 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
     fd.set("noWa", s.noWa ?? "");
     fd.set("sosmed", s.sosmed ?? "");
     fd.set("infoPembayaran", s.infoPembayaran ?? "");
+    fd.set("qris", s.qris ?? "");
     fd.set("footer", s.footer ?? "");
     fd.set("prefixNota", s.prefixNota);
     fd.set("ukuranDefault", s.ukuranDefault);
@@ -129,8 +141,8 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
-      <div className="glass-panel space-y-4 rounded-[20px] p-5">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
+      <div className="glass-panel min-w-0 space-y-4 rounded-[20px] p-5">
         <Section title="Identitas toko">
           <Field label="Nama toko (opsional)" htmlFor="namaToko">
             <Input
@@ -226,6 +238,40 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
               onChange={(e) => setText("infoPembayaran", e.target.value)}
             />
           </Field>
+          <div>
+            <Label>QRIS (opsional)</Label>
+            <div className="flex items-center gap-3">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border border-panel-border bg-white">
+                {s.qris ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- data: URL preview
+                  <img src={s.qris} alt="QRIS" className="h-full w-full object-cover" />
+                ) : (
+                  <QrCode className="h-6 w-6 text-neutral-400" />
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" size="sm" onClick={() => qrisRef.current?.click()}>
+                  {s.qris ? "Ganti QRIS" : "Pilih gambar"}
+                </Button>
+                {s.qris && (
+                  <Button type="button" variant="danger" size="sm" onClick={() => set("qris", null)}>
+                    <Trash2 className="h-4 w-4" />
+                    Hapus
+                  </Button>
+                )}
+              </div>
+              <input
+                ref={qrisRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleQrisPick}
+              />
+            </div>
+            <p className="mt-1.5 text-xs text-glass-ink-faint">
+              Gambar dipotong 1:1 saat diupload. Tampil di kanan bawah struk, sejajar info pembayaran.
+            </p>
+          </div>
           <Field label="Catatan bawah (opsional)" htmlFor="footer">
             <textarea
               id="footer"
@@ -259,11 +305,6 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
             />
           </div>
           <Toggle
-            label="Tampilkan stempel LUNAS / BELUM LUNAS"
-            checked={s.tampilkanStempel}
-            onChange={(v) => set("tampilkanStempel", v)}
-          />
-          <Toggle
             label="Tampilkan isi paket"
             checked={s.tampilkanKomponenPaket}
             onChange={(v) => set("tampilkanKomponenPaket", v)}
@@ -281,14 +322,23 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
         </Button>
       </div>
 
-      <div className="glass-panel space-y-3 rounded-[20px] p-5 lg:sticky lg:top-4">
+      <QrisCropper
+        file={qrisFile}
+        onCancel={() => setQrisFile(null)}
+        onDone={(dataUrl) => {
+          set("qris", dataUrl);
+          setQrisFile(null);
+        }}
+      />
+
+      <div className="glass-panel min-w-0 space-y-3 rounded-[20px] p-5 lg:sticky lg:top-4">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-display font-bold text-glass-ink">Pratinjau</h2>
           <span className="text-xs text-glass-ink-faint">Contoh pesanan</span>
         </div>
         <UkuranSwitch value={previewUkuran} onChange={setPreviewUkuran} />
         <div className="rounded-[12px] bg-panel p-2">
-          <StrukPreview setting={s} order={SAMPLE_ORDER} ukuran={previewUkuran} />
+          <StrukPreview setting={s} order={SAMPLE_ORDER} ukuran={previewUkuran} stempel />
         </div>
       </div>
     </div>
