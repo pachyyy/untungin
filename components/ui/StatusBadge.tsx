@@ -3,6 +3,7 @@ import { Badge, type BadgeProps } from "@/components/ui/Badge";
 
 const variantByStatus: Record<Status, BadgeProps["variant"]> = {
   belum_bayar: "warning",
+  dibatalkan: "danger",
   nyicil: "info",
   lunas: "success",
 };

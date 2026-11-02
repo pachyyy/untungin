@@ -4,13 +4,14 @@ export function marginPersen(hargaModal: number, hargaJual: number): number {
   return ((hargaJual - hargaModal) / hargaModal) * 100;
 }
 
-export const STATUS_LIST = ["belum_bayar", "nyicil", "lunas"] as const;
+export const STATUS_LIST = ["belum_bayar", "nyicil", "lunas", "dibatalkan"] as const;
 export type Status = (typeof STATUS_LIST)[number];
 
 export const STATUS_LABEL: Record<Status, string> = {
   belum_bayar: "Belum Bayar",
   nyicil: "Nyicil",
   lunas: "Lunas",
+  dibatalkan: "Dibatalkan",
 };
 
 /**
@@ -25,6 +26,7 @@ export const STATUS_RANK: Record<Status, number> = {
   belum_bayar: 0,
   nyicil: 1,
   lunas: 2,
+  dibatalkan: 3,
 };
 
 type ItemLike = { jumlah: number; hargaSaat: number; modalSaat: number };

@@ -12,6 +12,7 @@ const badgeVariants = cva(
         success: "badge-success bg-glass-success/15 text-glass-success",
         warning: "badge-warning bg-glass-warning/15 text-glass-warning",
         info: "badge-primary bg-glass-accent/15 text-glass-accent",
+        danger: "badge-danger bg-glass-danger/15 text-glass-danger",
       },
     },
     defaultVariants: { variant: "default" },

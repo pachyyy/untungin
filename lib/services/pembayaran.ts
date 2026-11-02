@@ -26,6 +26,8 @@ async function recomputeStatus(
     },
   });
   if (!pesanan) return;
+  // Cancelled is final — payments kept on it as history must not revive it.
+  if (pesanan.status === "dibatalkan") return;
   if (!allowDowngrade && pesanan.status === "lunas") return;
 
   const total = totalPesanan(pesanan);
@@ -65,9 +67,11 @@ export async function tambahPembayaran(
 
   const pesanan = await prisma.pesanan.findUnique({
     where: { id: pesananId },
-    select: { id: true },
+    select: { id: true, status: true },
   });
   if (!pesanan) return fail("Pesanan tidak ditemukan.", 404);
+  if (pesanan.status === "dibatalkan")
+    return fail("Pesanan yang dibatalkan tidak bisa dibayar.", 409);
 
   let createdId = "";
   await prisma.$transaction(async (tx) => {
@@ -123,6 +127,8 @@ export async function tandaiLunas(
     include: { pembayaran: true },
   });
   if (!pesanan) return fail("Pesanan tidak ditemukan.", 404);
+  if (pesanan.status === "dibatalkan")
+    return fail("Pesanan yang dibatalkan tidak bisa ditandai lunas.", 409);
   if (pesanan.pembayaran.length === 0)
     return fail("Tambahkan minimal satu pembayaran dulu.");
 

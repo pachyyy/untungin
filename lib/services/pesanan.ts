@@ -99,6 +99,8 @@ async function stokTidakCukupMessage(produkId: string): Promise<string> {
   return `Stok tidak cukup untuk salah satu produk (sisa ${p?.stok ?? 0}).`;
 }
 
+export const DIBATALKAN_TERKUNCI = "Pesanan yang dibatalkan tidak bisa diubah.";
+
 export type CreatePesananInput = {
   namaCustomer: string;
   noHp: string;
@@ -259,6 +261,9 @@ export async function updatePesanan(
     },
   });
   if (!existing) return fail("Pesanan tidak ditemukan.", 404);
+  // A cancelled order's stock is already back on the shelf; editing it would
+  // re-derive its status and reconcile stock against lines it no longer holds.
+  if (existing.status === "dibatalkan") return fail(DIBATALKAN_TERKUNCI, 409);
 
   // Lines are deleted and recreated below, so a caller that doesn't send
   // `keterangan` at all (an APK built before the field existed) would wipe
@@ -422,16 +427,70 @@ export async function deletePesanan(
   const needs = stockNeeds(pesanan);
 
   await prisma.$transaction(async (tx) => {
-    // Stock always left at creation now, so deleting always returns it.
+    // Take the row lock first (a no-op write), then read the status: a
+    // cancel racing this delete has either committed by now — so this sees
+    // "dibatalkan" — or is waiting on us. Without it both could return stock.
+    await tx.pesanan.update({ where: { id }, data: { updatedAt: new Date() } });
+    const fresh = await tx.pesanan.findUniqueOrThrow({ where: { id }, select: { status: true } });
+
+    // Stock leaves at creation, so deleting returns it — unless the order was
+    // already cancelled, which returned it then.
+    if (fresh.status !== "dibatalkan") {
+      for (const [produkId, qty] of needs) {
+        await tx.produk.update({
+          where: { id: produkId },
+          data: { stok: { increment: qty } },
+        });
+      }
+    }
+    // Cascades: Pembayaran rows go with the order.
+    await tx.pesanan.delete({ where: { id } });
+  });
+
+  return ok({ id });
+}
+
+/**
+ * Cancels an order: status becomes "dibatalkan" (from any other status) and
+ * its stock goes back on the shelf. Payments already recorded are kept as
+ * history — the order simply stops counting toward omzet/untung/pending,
+ * which all key off status. Final: a cancelled order can't be edited, paid
+ * or un-cancelled (see updatePesanan / pembayaran.ts), only deleted.
+ */
+export async function batalPesanan(
+  id: string,
+  _actor: Actor = WEB_ACTOR
+): Promise<ServiceResult<{ id: string }>> {
+  if (!id) return fail("Pesanan tidak ditemukan.", 404);
+
+  const pesanan = await prisma.pesanan.findUnique({
+    where: { id },
+    include: { items: true, pakets: { include: { komponen: true } } },
+  });
+  if (!pesanan) return fail("Pesanan tidak ditemukan.", 404);
+  if (pesanan.status === "dibatalkan") return fail("Pesanan sudah dibatalkan.", 409);
+
+  const needs = stockNeeds(pesanan);
+
+  const cancelled = await prisma.$transaction(async (tx) => {
+    // Guarded claim, like the one-time enroll code: the read above is only a
+    // fast pre-check, this conditional update is what stops two concurrent
+    // cancels (or a cancel racing a delete) from both returning the stock.
+    const claim = await tx.pesanan.updateMany({
+      where: { id, status: { not: "dibatalkan" } },
+      data: { status: "dibatalkan", statusRank: STATUS_RANK.dibatalkan },
+    });
+    if (claim.count === 0) return false;
+
     for (const [produkId, qty] of needs) {
       await tx.produk.update({
         where: { id: produkId },
         data: { stok: { increment: qty } },
       });
     }
-    // Cascades: Pembayaran rows go with the order.
-    await tx.pesanan.delete({ where: { id } });
+    return true;
   });
+  if (!cancelled) return fail("Pesanan sudah dibatalkan atau tidak ditemukan.", 409);
 
   return ok({ id });
 }

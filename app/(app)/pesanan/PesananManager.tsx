@@ -40,7 +40,7 @@ import {
   Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { createPesanan, updatePesanan, deletePesanan } from "@/lib/actions/pesanan";
+import { createPesanan, updatePesanan, deletePesanan, batalPesanan } from "@/lib/actions/pesanan";
 import {
   tambahPembayaran,
   hapusPembayaran,
@@ -130,6 +130,7 @@ export function PesananManager({
   const [formOpen, setFormOpen] = useState(false);
   const [editingOrder, setEditingOrder] = useState<PesananRow | null>(null);
   const [confirmDel, setConfirmDel] = useState<PesananRow | null>(null);
+  const [confirmBatal, setConfirmBatal] = useState<PesananRow | null>(null);
   const [payingOrder, setPayingOrder] = useState<PesananRow | null>(null);
   const [strukOrder, setStrukOrder] = useState<PesananRow | null>(null);
 
@@ -303,6 +304,7 @@ export function PesananManager({
             onBack={clearSelection}
             onEdit={() => openEditForm(selected)}
             onDelete={() => setConfirmDel(selected)}
+            onBatal={() => setConfirmBatal(selected)}
             onPay={() => setPayingOrder(selected)}
           />
         ) : (
@@ -335,6 +337,15 @@ export function PesananManager({
         }}
       />
 
+      <BatalModal
+        row={confirmBatal}
+        onClose={() => setConfirmBatal(null)}
+        onDone={() => {
+          setConfirmBatal(null);
+          router.refresh();
+        }}
+      />
+
       <StrukModal
         order={strukOrder}
         setting={strukSetting}
@@ -358,6 +369,7 @@ function PesananDetail({
   onBack,
   onEdit,
   onDelete,
+  onBatal,
   onPay,
 }: {
   p: PesananRow;
@@ -366,10 +378,13 @@ function PesananDetail({
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onBatal: () => void;
   onPay: () => void;
 }) {
   const total = totalPesanan(p);
   const untung = untungPesanan(p);
+  // Cancelled is final: no edit, no payments, no un-cancel — only print or delete.
+  const batal = p.status === "dibatalkan";
 
   return (
     <div className="flex-1 space-y-5 overflow-y-auto p-5 lg:min-h-0">
@@ -392,14 +407,16 @@ function PesananDetail({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label="Edit pesanan"
-            className="flex h-9 w-9 items-center justify-center rounded-[10px] text-glass-ink-faint transition-colors hover:bg-panel-strong hover:text-glass-ink"
-          >
-            <Pencil className="h-4 w-4" />
-          </button>
+          {!batal && (
+            <button
+              type="button"
+              onClick={onEdit}
+              aria-label="Edit pesanan"
+              className="flex h-9 w-9 items-center justify-center rounded-[10px] text-glass-ink-faint transition-colors hover:bg-panel-strong hover:text-glass-ink"
+            >
+              <Pencil className="h-4 w-4" />
+            </button>
+          )}
           <StatusBadge status={p.status} />
         </div>
       </div>
@@ -450,9 +467,17 @@ function PesananDetail({
         ))}
       </ul>
 
+      {batal && (
+        <p className="rounded-[12px] bg-glass-danger/10 px-3 py-2 text-sm text-glass-danger">
+          Pesanan ini dibatalkan. Stok sudah dikembalikan dan tidak dihitung di omzet atau untung.
+        </p>
+      )}
+
       <div className="flex items-center justify-between border-y border-glass-divider py-3 text-sm">
         <span className="text-data font-bold text-glass-ink">Total {formatRupiah(total)}</span>
-        <span className="text-data font-bold text-glass-success">Untung {formatRupiah(untung)}</span>
+        {!batal && (
+          <span className="text-data font-bold text-glass-success">Untung {formatRupiah(untung)}</span>
+        )}
       </div>
 
       <div>
@@ -482,16 +507,25 @@ function PesananDetail({
       </div>
 
       <div className="flex flex-wrap gap-2 pt-1">
-        <Button onClick={onPay}>
-          {p.status === "belum_bayar" ? "Catat Bayar" : "Kelola Pembayaran"}
-        </Button>
+        {!batal && (
+          <Button onClick={onPay}>
+            {p.status === "belum_bayar" ? "Catat Bayar" : "Kelola Pembayaran"}
+          </Button>
+        )}
         <Button variant="outline" onClick={onPrint}>
           <Receipt className="h-4 w-4" />
           Cetak Struk
         </Button>
-        <Button variant="outline" onClick={onEdit}>
-          Edit
-        </Button>
+        {!batal && (
+          <Button variant="outline" onClick={onEdit}>
+            Edit
+          </Button>
+        )}
+        {!batal && (
+          <Button variant="outline" onClick={onBatal}>
+            Batal
+          </Button>
+        )}
         <Button variant="danger" onClick={onDelete}>
           Hapus
         </Button>
@@ -1401,8 +1435,10 @@ function DeleteModal({
     <Modal open={!!row} onClose={onClose} title="Hapus pesanan?">
       <p className="text-sm text-glass-ink-dim">
         Yakin ingin menghapus pesanan{" "}
-        <span className="font-semibold text-glass-ink">{row?.namaCustomer}</span>? Jika
-        stok sudah dipotong, stok akan dikembalikan.
+        <span className="font-semibold text-glass-ink">{row?.namaCustomer}</span>?{" "}
+        {row?.status === "dibatalkan"
+          ? "Stok sudah dikembalikan saat pesanan dibatalkan."
+          : "Stok akan dikembalikan."}
       </p>
       <div className="mt-4 flex gap-2">
         <Button variant="outline" className="flex-1" onClick={onClose}>
@@ -1415,6 +1451,57 @@ function DeleteModal({
           disabled={pending}
         >
           {pending ? "Menghapus…" : "Hapus"}
+        </Button>
+      </div>
+    </Modal>
+  );
+}
+
+function BatalModal({
+  row,
+  onClose,
+  onDone,
+}: {
+  row: PesananRow | null;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const { toast } = useToast();
+
+  function handleBatal() {
+    if (!row) return;
+    const fd = new FormData();
+    fd.set("id", row.id);
+    startTransition(async () => {
+      const res = await batalPesanan(fd);
+      if (res.ok) {
+        toast("Pesanan dibatalkan.");
+        onDone();
+      } else toast(res.error ?? "Gagal membatalkan pesanan.", "error");
+    });
+  }
+
+  return (
+    <Modal open={!!row} onClose={onClose} title="Batalkan pesanan?">
+      <p className="text-sm text-glass-ink-dim">
+        Pesanan{" "}
+        <span className="font-semibold text-glass-ink">{row?.namaCustomer}</span> akan
+        berstatus Dibatalkan dan stok barangnya dikembalikan. Pembayaran yang sudah dicatat
+        tetap tersimpan sebagai riwayat. Pesanan yang dibatalkan tidak bisa diubah, dibayar,
+        atau diaktifkan lagi.
+      </p>
+      <div className="mt-4 flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onClose}>
+          Kembali
+        </Button>
+        <Button
+          variant="danger"
+          className="flex-1"
+          onClick={handleBatal}
+          disabled={pending}
+        >
+          {pending ? "Membatalkan…" : "Batalkan Pesanan"}
         </Button>
       </div>
     </Modal>

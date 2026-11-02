@@ -305,6 +305,67 @@ async function main() {
     const laporanOwner = await call("GET", "/laporan", undefined, ownerToken);
     check("owner GET /laporan 200", laporanOwner.status === 200, laporanOwner);
 
+    // ------------------------------------------- batal (cancel) an order
+    // Uses its own 2-pcs order so stock arithmetic is independent of the
+    // order the rest of the script is still holding (stock is 4 here).
+    const batalOrder = await call(
+      "POST",
+      "/pesanan",
+      { namaCustomer: "__SMOKE_BATAL__", items: [{ produkId, jumlah: 2, hargaSaat: 2000 }], pakets: [] },
+      staffToken
+    );
+    check("batal: create order 201", batalOrder.status === 201, batalOrder);
+    const batalId = batalOrder.json.id;
+    await call("POST", `/pesanan/${batalId}/pembayaran`, { jumlah: 1000, jenis: "cicilan" }, staffToken);
+    const stokBeforeBatal = (await call("GET", "/produk", undefined, ownerToken)).json.find((p: any) => p.id === produkId);
+    check("batal: stock 4 -> 2 after order", stokBeforeBatal?.stok === 2, stokBeforeBatal);
+
+    const staffBatal = await call("POST", `/pesanan/${batalId}/batal`, undefined, staffToken);
+    check("staff batal -> 403", staffBatal.status === 403, staffBatal);
+
+    const ownerBatal = await call("POST", `/pesanan/${batalId}/batal`, undefined, ownerToken);
+    check("owner batal 200", ownerBatal.status === 200, ownerBatal);
+    const batalDetail = await call("GET", `/pesanan/${batalId}`, undefined, ownerToken);
+    check("batal: status dibatalkan", batalDetail.json.status === "dibatalkan", batalDetail.json);
+    check("batal: payment kept as history", batalDetail.json.pembayaran?.length === 1, batalDetail.json);
+    const stokAfterBatal = (await call("GET", "/produk", undefined, ownerToken)).json.find((p: any) => p.id === produkId);
+    check("batal: stock returned 2 -> 4", stokAfterBatal?.stok === 4, stokAfterBatal);
+
+    const batalAgain = await call("POST", `/pesanan/${batalId}/batal`, undefined, ownerToken);
+    check("batal twice -> 409 (stock not returned twice)", batalAgain.status === 409, batalAgain);
+    const batalPay = await call("POST", `/pesanan/${batalId}/pembayaran`, { jumlah: 500, jenis: "cicilan" }, staffToken);
+    check("pay a cancelled order -> 409", batalPay.status === 409, batalPay);
+    const batalEdit = await call(
+      "PATCH",
+      `/pesanan/${batalId}`,
+      { namaCustomer: "__SMOKE_BATAL__", items: [{ produkId, jumlah: 1, hargaSaat: 2000 }], pakets: [] },
+      staffToken
+    );
+    check("edit a cancelled order -> 409", batalEdit.status === 409, batalEdit);
+    const batalLunas = await call("POST", `/pesanan/${batalId}/lunas`, undefined, ownerToken);
+    check("tandaiLunas on a cancelled order -> 409", batalLunas.status === 409, batalLunas);
+    const batalPayDelete = await call(
+      "DELETE",
+      `/pesanan/${batalId}/pembayaran/${batalDetail.json.pembayaran[0].id}`,
+      undefined,
+      ownerToken
+    );
+    check("delete payment on cancelled order 200", batalPayDelete.status === 200, batalPayDelete);
+    const stillBatal = await call("GET", `/pesanan/${batalId}`, undefined, ownerToken);
+    check("removing its payment doesn't revive it", stillBatal.json.status === "dibatalkan", stillBatal.json);
+
+    const batalList = await call("GET", "/pesanan?status=dibatalkan&limit=100", undefined, ownerToken);
+    check(
+      "list filters by dibatalkan",
+      batalList.json.items?.some((x: any) => x.id === batalId),
+      batalList.json
+    );
+
+    const delBatal = await call("DELETE", `/pesanan/${batalId}`, undefined, ownerToken);
+    check("delete cancelled order 200", delBatal.status === 200, delBatal);
+    const stokAfterDelBatal = (await call("GET", "/produk", undefined, ownerToken)).json.find((p: any) => p.id === produkId);
+    check("deleting a cancelled order doesn't return stock again (4)", stokAfterDelBatal?.stok === 4, stokAfterDelBatal);
+
     // ------------------------------------------ delete order, stock returns
     const delPesanan = await call("DELETE", `/pesanan/${pesananId}`, undefined, ownerToken);
     check("delete pesanan 200", delPesanan.status === 200, delPesanan);

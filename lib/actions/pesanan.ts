@@ -44,6 +44,13 @@ export async function updatePesanan(formData: FormData): Promise<ActionResult> {
   return toActionResult(result);
 }
 
+export async function batalPesanan(formData: FormData): Promise<ActionResult> {
+  const id = String(formData.get("id") ?? "");
+  const result = await pesananService.batalPesanan(id);
+  if (result.ok) revalidatePesananPaths();
+  return toActionResult(result);
+}
+
 export async function deletePesanan(formData: FormData): Promise<ActionResult> {
   const id = String(formData.get("id") ?? "");
   const result = await pesananService.deletePesanan(id);

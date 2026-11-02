@@ -391,7 +391,8 @@
 [data-design-mode="brutalist"] .badge-default,
 [data-design-mode="brutalist"] .badge-primary,
 [data-design-mode="brutalist"] .badge-success,
-[data-design-mode="brutalist"] .badge-warning {
+[data-design-mode="brutalist"] .badge-warning,
+[data-design-mode="brutalist"] .badge-danger {
   border: 2px solid var(--panel-border);
   color: var(--accent-ink);
   padding: 4px 10px !important;
@@ -408,6 +409,9 @@
 }
 [data-design-mode="brutalist"] .badge-warning {
   background-color: var(--glass-warning);
+}
+[data-design-mode="brutalist"] .badge-danger {
+  background-color: var(--glass-danger);
 }
 
 .brutal-rect {

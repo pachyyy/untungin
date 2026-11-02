@@ -49,6 +49,7 @@ export const Struk = forwardRef<
   const size = SIZE[ukuran];
   const small = size.font - 2;
   const lunas = order.status === "lunas";
+  const batal = order.status === "dibatalkan";
   const kontak = [setting.noWa ? `WA ${setting.noWa}` : null, setting.sosmed]
     .filter(Boolean)
     .join(" · ");
@@ -165,7 +166,7 @@ export const Struk = forwardRef<
               transform: "rotate(-5deg)",
             }}
           >
-            {lunas ? "LUNAS" : "BELUM LUNAS"}
+            {batal ? "DIBATALKAN" : lunas ? "LUNAS" : "BELUM LUNAS"}
           </span>
         </div>
       )}
