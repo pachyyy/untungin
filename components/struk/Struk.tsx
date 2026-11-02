@@ -77,9 +77,11 @@ export const Struk = forwardRef<
             style={{ maxWidth: 120, maxHeight: 80, margin: "0 auto 8px", display: "block" }}
           />
         )}
-        <div style={{ fontSize: size.font + 6, fontWeight: 800, letterSpacing: 0.5 }}>
-          {setting.namaToko}
-        </div>
+        {setting.namaToko && (
+          <div style={{ fontSize: size.font + 6, fontWeight: 800, letterSpacing: 0.5 }}>
+            {setting.namaToko}
+          </div>
+        )}
         {setting.tagline && <div style={{ color: DIM, fontSize: small }}>{setting.tagline}</div>}
         {setting.alamat && (
           <div style={{ ...multiline, fontSize: small, marginTop: 4 }}>{setting.alamat}</div>

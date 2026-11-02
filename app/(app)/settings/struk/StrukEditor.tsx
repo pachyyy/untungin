@@ -132,7 +132,7 @@ export function StrukEditor({ initial }: { initial: StrukSettingData }) {
     <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
       <div className="glass-panel space-y-4 rounded-[20px] p-5">
         <Section title="Identitas toko">
-          <Field label="Nama toko" htmlFor="namaToko">
+          <Field label="Nama toko (opsional)" htmlFor="namaToko">
             <Input
               id="namaToko"
               maxLength={100}

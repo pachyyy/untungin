@@ -41,7 +41,9 @@ export default async function SettingsPage() {
           </p>
         </div>
         <div className="rounded-[14px] bg-panel-strong px-3 py-2.5 text-sm">
-          <p className="truncate font-bold text-glass-ink">{struk.namaToko}</p>
+          <p className="truncate font-bold text-glass-ink">
+            {struk.namaToko || "Tanpa nama toko"}
+          </p>
           <p className="text-xs text-glass-ink-dim">
             Ukuran default {struk.ukuranDefault === "a5" ? "Nota A5" : "Struk 80mm"} · Nomor{" "}
             {struk.prefixNota}0001

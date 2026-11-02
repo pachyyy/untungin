@@ -219,8 +219,10 @@ async function main() {
         JSON.stringify(emptyStrukPatch.json) === JSON.stringify(strukSetting.json),
       emptyStrukPatch
     );
-    const badStrukPatch = await call("PATCH", "/struk-setting", { namaToko: "  " }, ownerToken);
-    check("owner PATCH /struk-setting blank namaToko 400", badStrukPatch.status === 400, badStrukPatch);
+    // namaToko is optional (blank is valid), so the validation case is the
+    // length cap — a blank PATCH would succeed and wipe the real setting.
+    const badStrukPatch = await call("PATCH", "/struk-setting", { namaToko: "x".repeat(101) }, ownerToken);
+    check("owner PATCH /struk-setting 101-char namaToko 400", badStrukPatch.status === 400, badStrukPatch);
 
     // --------------------------------- concurrent stock guard (last unit)
     const raceProduk = await call(

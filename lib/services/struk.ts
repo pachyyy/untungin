@@ -104,8 +104,9 @@ export type UpdateStrukSettingInput = {
 export async function updateStrukSetting(
   input: UpdateStrukSettingInput
 ): Promise<ServiceResult<StrukSettingData>> {
+  // Optional: an empty string is stored as-is (the column is non-null) and
+  // means "print no store name", for shops whose logo already carries it.
   const namaToko = input.namaToko.trim();
-  if (!namaToko) return fail("Nama toko wajib diisi.");
   if (namaToko.length > SHORT_MAX) return fail(`Nama toko maksimal ${SHORT_MAX} karakter.`);
 
   const logo = input.logo || null;
