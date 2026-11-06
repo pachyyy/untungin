@@ -2,6 +2,7 @@ import { prisma } from "@/lib/prisma";
 import { totalPesanan, totalDibayar, untungRealisasi } from "@/lib/calc";
 import { monthRangeJakarta } from "@/lib/date";
 import { findLunasInRange } from "@/lib/services/laporan";
+import { getKas } from "@/lib/services/kas";
 
 const STOK_MENIPIS = 5;
 
@@ -20,12 +21,16 @@ export type DashboardData = {
    * nyicil, full total for belum_bayar). */
   pendingOmzet: number;
   stokMenipis: { id: string; nama: string; stok: number }[];
+  /** Money accounts (lib/services/kas.ts); null until the owner has entered
+   * starting balances in Pengaturan → Keuangan. */
+  modal: number | null;
+  saldoKeuntungan: number | null;
 };
 
 export async function getDashboardData(): Promise<DashboardData> {
   const { start: monthStart, end: monthEnd } = monthRangeJakarta(new Date());
 
-  const [lunasBulanIni, pendingPesanan, stokMenipis, semuaProduk] = await Promise.all([
+  const [lunasBulanIni, pendingPesanan, stokMenipis, semuaProduk, kas] = await Promise.all([
     findLunasInRange(monthStart, new Date(monthEnd.getTime() - 1)),
     prisma.pesanan.findMany({
       where: { status: { in: ["belum_bayar", "nyicil"] } },
@@ -43,6 +48,7 @@ export async function getDashboardData(): Promise<DashboardData> {
       take: 10,
     }),
     prisma.produk.findMany({ select: { stok: true, hargaModal: true } }),
+    getKas(),
   ]);
 
   // Realized omzet/untung = money actually received on orders that became
@@ -69,5 +75,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     pendingCount,
     pendingOmzet,
     stokMenipis: stokMenipis.map((p) => ({ id: p.id, nama: p.nama, stok: p.stok })),
+    modal: kas.aktif ? kas.modal : null,
+    saldoKeuntungan: kas.aktif ? kas.saldo : null,
   };
 }

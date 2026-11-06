@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS, isNavItemActive } from "@/lib/nav";
+import { VISIBLE_NAV_ITEMS, isNavItemActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 export function BottomNav() {
@@ -10,7 +10,7 @@ export function BottomNav() {
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 lg:hidden">
       <div className="glass-panel-strong glass-shadow-lg mx-auto flex max-w-md items-stretch gap-0.5 overflow-x-auto rounded-full px-2 py-1.5">
-        {NAV_ITEMS.map((item) => {
+        {VISIBLE_NAV_ITEMS.map((item) => {
           const active = isNavItemActive(pathname, item.href);
           return (
             <Link

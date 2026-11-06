@@ -82,6 +82,13 @@ async function main() {
   let produkId = "";
   let raceProdukId = "";
   let pesananId = "";
+  // Ledger fixtures: products made for the kas checks, the time the run
+  // started (to delete only ledger rows this run wrote), and whether the real
+  // database already had balances set up (if not, this run creates the
+  // KasSetting and must remove it again).
+  const kasProdukIds: string[] = [];
+  const smokeStart = new Date();
+  let kasWasAktif = true;
 
   try {
     // ---------------------------------------------------------------- auth
@@ -373,11 +380,169 @@ async function main() {
     const stokAfterDelete = await call("GET", "/produk", undefined, ownerToken);
     const p3 = stokAfterDelete.json.find((p: any) => p.id === produkId);
     check("stock restored 4 -> 5", p3?.stok === 5, p3);
+
+    // ----------------------------------------------- kas (modal / saldo)
+    const kasGet = async () => (await call("GET", "/kas", undefined, ownerToken)).json;
+    const kasDelta = async (before: any) => {
+      const now = await kasGet();
+      return { modal: now.modal - before.modal, saldo: now.saldo - before.saldo };
+    };
+    const same = (d: any, modal: number, saldo: number) => d.modal === modal && d.saldo === saldo;
+
+    const kas0 = await kasGet();
+    kasWasAktif = kas0.aktif === true;
+    check("staff GET /kas -> 403", (await call("GET", "/kas", undefined, staffToken)).status === 403);
+    check("staff PUT /kas -> 403", (await call("PUT", "/kas", { modal: 1, saldo: 1 }, staffToken)).status === 403);
+    check("staff GET /kas/mutasi -> 403", (await call("GET", "/kas/mutasi", undefined, staffToken)).status === 403);
+    check("staff tarik -> 403", (await call("POST", "/kas/tarik", { jumlah: 1 }, staffToken)).status === 403);
+    check(
+      "tarik with no setup -> 400 (when not set up)",
+      kasWasAktif || (await call("POST", "/kas/tarik", { jumlah: 1 }, ownerToken)).status === 400
+    );
+
+    // Before the starting balances exist nothing may be recorded.
+    const preProduk = await call(
+      "POST",
+      "/produk",
+      { nama: "__SMOKE_KAS_PRE__", hargaModal: 1000, stok: 3, supplierId },
+      ownerToken
+    );
+    kasProdukIds.push(preProduk.json.id);
+    if (!kasWasAktif) {
+      const hist = await call("GET", "/kas/mutasi", undefined, ownerToken);
+      check("nothing recorded before setup", hist.json.items?.length === 0, hist.json);
+      const setup = await call("PUT", "/kas", { modal: 100000, saldo: 50000 }, ownerToken);
+      check(
+        "PUT /kas first call sets starting balances",
+        setup.json.aktif && setup.json.modal === 100000 && setup.json.saldo === 50000,
+        setup.json
+      );
+    }
+    const b0 = await kasGet();
+    check("kas is active", b0.aktif === true, b0);
+
+    const k2 = await call("POST", "/produk", { nama: "__SMOKE_KAS__", hargaModal: 1000, stok: 2, supplierId }, ownerToken);
+    kasProdukIds.push(k2.json.id);
+    check("new product stok 2 x 1000 -> modal -2000", same(await kasDelta(b0), -2000, 0), await kasDelta(b0));
+
+    const bRestock = await kasGet();
+    await call("POST", `/produk/${k2.json.id}/restock`, { qty: 8, hargaBeli: 1250 }, ownerToken);
+    check("restock 8 x 1250 -> modal -10000", same(await kasDelta(bRestock), -10000, 0), await kasDelta(bRestock));
+
+    const bEdit = await kasGet();
+    await call(
+      "PATCH",
+      `/produk/${k2.json.id}`,
+      { nama: "__SMOKE_KAS__", hargaModal: 1200, stok: 14, stokAwal: 10, supplierId },
+      ownerToken
+    );
+    check("edit raising stok by 4 @1200 -> modal -4800", same(await kasDelta(bEdit), -4800, 0), await kasDelta(bEdit));
+    const bLower = await kasGet();
+    await call(
+      "PATCH",
+      `/produk/${k2.json.id}`,
+      { nama: "__SMOKE_KAS__", hargaModal: 1200, stok: 12, stokAwal: 14, supplierId },
+      ownerToken
+    );
+    check("edit lowering stok moves no money", same(await kasDelta(bLower), 0, 0), await kasDelta(bLower));
+
+    // Order: price 2000, cost snapshot 1200 -> each payment splits 60/40.
+    const bOrder = await kasGet();
+    const ko = await call(
+      "POST",
+      "/pesanan",
+      { namaCustomer: "__SMOKE_KAS_CUST__", items: [{ produkId: k2.json.id, jumlah: 1, hargaSaat: 2000 }], pakets: [] },
+      ownerToken
+    );
+    check("creating an order moves no money", same(await kasDelta(bOrder), 0, 0), await kasDelta(bOrder));
+    const koId = ko.json.id;
+
+    const bPay1 = await kasGet();
+    await call("POST", `/pesanan/${koId}/pembayaran`, { jumlah: 1000, jenis: "cicilan" }, ownerToken);
+    check("payment 1000 -> modal +600, saldo +400", same(await kasDelta(bPay1), 600, 400), await kasDelta(bPay1));
+    const bPay2 = await kasGet();
+    const pay2 = await call("POST", `/pesanan/${koId}/pembayaran`, { jumlah: 1000, jenis: "cicilan" }, ownerToken);
+    check("payment 2 (modal share hits the cost cap) -> +600 / +400", same(await kasDelta(bPay2), 600, 400), await kasDelta(bPay2));
+    const bPay3 = await kasGet();
+    await call("POST", `/pesanan/${koId}/pembayaran`, { jumlah: 500, jenis: "cicilan" }, ownerToken);
+    check("overpayment 500 goes entirely to saldo", same(await kasDelta(bPay3), 0, 500), await kasDelta(bPay3));
+
+    const bDelPay = await kasGet();
+    await call("DELETE", `/pesanan/${koId}/pembayaran/${pay2.json.id}`, undefined, ownerToken);
+    check("deleting a payment reverses its split", same(await kasDelta(bDelPay), -600, -400), await kasDelta(bDelPay));
+
+    const bBatal = await kasGet();
+    check("cancel an order with payments 200", (await call("POST", `/pesanan/${koId}/batal`, undefined, ownerToken)).status === 200);
+    check("cancel reverses the remaining payments (-600 / -900)", same(await kasDelta(bBatal), -600, -900), await kasDelta(bBatal));
+    check("order back to net zero after cancel", same(await kasDelta(bOrder), 0, 0), await kasDelta(bOrder));
+    const histBatal = await call("GET", "/kas/mutasi?limit=50", undefined, ownerToken);
+    check("history shows 'batal' rows", histBatal.json.items.some((m: any) => m.jenis === "batal"), histBatal.json.items.slice(0, 5));
+    await call("DELETE", `/pesanan/${koId}`, undefined, ownerToken);
+    check("deleting the cancelled order leaves balances unchanged", same(await kasDelta(bOrder), 0, 0), await kasDelta(bOrder));
+
+    // Full single payment, then deleting the order reverses it entirely.
+    const bFull = await kasGet();
+    const kp = await call(
+      "POST",
+      "/pesanan",
+      { namaCustomer: "__SMOKE_KAS_CUST__", items: [{ produkId: k2.json.id, jumlah: 1, hargaSaat: 2000 }], pakets: [] },
+      ownerToken
+    );
+    await call("POST", `/pesanan/${kp.json.id}/pembayaran`, { jumlah: 2000, jenis: "bayar" }, ownerToken);
+    check("full payment 2000 -> modal +1200, saldo +800", same(await kasDelta(bFull), 1200, 800), await kasDelta(bFull));
+    await call("DELETE", `/pesanan/${kp.json.id}`, undefined, ownerToken);
+    check("deleting a paid order reverses it", same(await kasDelta(bFull), 0, 0), await kasDelta(bFull));
+
+    // Below-cost order: the loss shows up as negative saldo, total still adds up.
+    const bLoss = await kasGet();
+    const lo = await call(
+      "POST",
+      "/pesanan",
+      { namaCustomer: "__SMOKE_KAS_CUST__", items: [{ produkId: k2.json.id, jumlah: 1, hargaSaat: 1000 }], pakets: [] },
+      ownerToken
+    );
+    await call("POST", `/pesanan/${lo.json.id}/pembayaran`, { jumlah: 1000, jenis: "bayar" }, ownerToken);
+    check("below-cost order: modal +1200, saldo -200", same(await kasDelta(bLoss), 1200, -200), await kasDelta(bLoss));
+    await call("DELETE", `/pesanan/${lo.json.id}`, undefined, ownerToken);
+
+    // Manual moves.
+    const bTarik = await kasGet();
+    check("tarik 0 -> 400", (await call("POST", "/kas/tarik", { jumlah: 0 }, ownerToken)).status === 400);
+    check("tarik 1000 200", (await call("POST", "/kas/tarik", { jumlah: 1000, catatan: "smoke" }, ownerToken)).status === 200);
+    check("tarik lowers saldo only", same(await kasDelta(bTarik), 0, -1000), await kasDelta(bTarik));
+    const bXfer = await kasGet();
+    check("bad transfer direction -> 400", (await call("POST", "/kas/transfer", { arah: "x", jumlah: 5 }, ownerToken)).status === 400);
+    await call("POST", "/kas/transfer", { arah: "saldo_ke_modal", jumlah: 500 }, ownerToken);
+    check("transfer saldo->modal 500", same(await kasDelta(bXfer), 500, -500), await kasDelta(bXfer));
+    await call("POST", "/kas/transfer", { arah: "modal_ke_saldo", jumlah: 200 }, ownerToken);
+    check("transfer modal->saldo 200 (net +300 / -300)", same(await kasDelta(bXfer), 300, -300), await kasDelta(bXfer));
+
+    const bSet = await kasGet();
+    const setNow = await call("PUT", "/kas", { modal: bSet.modal + 1000, saldo: bSet.saldo }, ownerToken);
+    check("PUT /kas later = set current balance (adjustment)", same(await kasDelta(bSet), 1000, 0) && setNow.status === 200, setNow.json);
+    const histAll = await call("GET", "/kas/mutasi?limit=2", undefined, ownerToken);
+    check("history paginates", histAll.json.items.length === 2 && typeof histAll.json.nextCursor === "string", histAll.json);
+    const histNext = await call("GET", `/kas/mutasi?limit=2&cursor=${histAll.json.nextCursor}`, undefined, ownerToken);
+    check("history next page differs", histNext.json.items[0]?.id !== histAll.json.items[0]?.id, histNext.json);
+
+    const dashKasOwner = await call("GET", "/dashboard", undefined, ownerToken);
+    check(
+      "owner dashboard has modal and saldoKeuntungan",
+      typeof dashKasOwner.json.modal === "number" && typeof dashKasOwner.json.saldoKeuntungan === "number",
+      dashKasOwner.json
+    );
+    const dashKasStaff = await call("GET", "/dashboard", undefined, staffToken);
+    check(
+      "staff dashboard has no modal/saldoKeuntungan",
+      !("modal" in dashKasStaff.json) && !("saldoKeuntungan" in dashKasStaff.json),
+      dashKasStaff.json
+    );
   } finally {
     console.log("--- cleanup ---");
     if (pesananId) await call("DELETE", `/pesanan/${pesananId}`, undefined, ownerToken);
     if (produkId) await call("DELETE", `/produk/${produkId}`, undefined, ownerToken);
     if (raceProdukId) await call("DELETE", `/produk/${raceProdukId}`, undefined, ownerToken);
+    for (const id of kasProdukIds) await call("DELETE", `/produk/${id}`, undefined, ownerToken);
     if (supplierId) await call("DELETE", `/supplier/${supplierId}`, undefined, ownerToken);
 
     if (ownerToken) {
@@ -411,6 +576,12 @@ async function main() {
       const delCodes = await prisma.enrollCode.deleteMany({
         where: { nama: { startsWith: "Smoke " } },
       });
+      // Ledger rows written by this run (product purchases/restocks have no
+      // FK to clean them up), and the KasSetting too if this run created it —
+      // so real balances are exactly as they were.
+      const delKas = await prisma.kasMutasi.deleteMany({ where: { createdAt: { gte: smokeStart } } });
+      if (!kasWasAktif) await prisma.kasSetting.deleteMany();
+      if (delKas.count) console.log(`removed ${delKas.count} ledger row(s) written by this run`);
       if (delDevices.count || delCodes.count) {
         console.log(
           `hard-deleted ${delDevices.count} test device(s), ${delCodes.count} test enroll code(s)`

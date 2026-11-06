@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { resolveCustomerId } from "@/lib/services/customer";
 import { STATUS_RANK, totalPesanan } from "@/lib/calc";
+import { kasBatal } from "@/lib/services/kas";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 import {
   normalizeItems,
@@ -488,6 +489,7 @@ export async function batalPesanan(
         data: { stok: { increment: qty } },
       });
     }
+    await kasBatal(tx, id, pesanan.namaCustomer);
     return true;
   });
   if (!cancelled) return fail("Pesanan sudah dibatalkan atau tidak ditemukan.", 409);

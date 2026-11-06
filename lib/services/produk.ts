@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseIntField } from "@/lib/parse";
+import { kasProdukBaru, kasStokNaik } from "@/lib/services/kas";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 
 const produkListInclude = {
@@ -64,8 +65,12 @@ export async function createProduk(
   const supplier = await resolveSupplierId(input);
   if (typeof supplier !== "string") return fail(supplier.error);
 
-  const created = await prisma.produk.create({
-    data: { nama, hargaModal, stok, supplierId: supplier },
+  const created = await prisma.$transaction(async (tx) => {
+    const row = await tx.produk.create({
+      data: { nama, hargaModal, stok, supplierId: supplier },
+    });
+    await kasProdukBaru(tx, { nama, stok, hargaModal });
+    return row;
   });
   return ok({ id: created.id });
 }
@@ -101,24 +106,32 @@ export async function updateProduk(
       : parseIntField(input.stokAwal, { min: 0 });
 
   if (stokAwal === null) {
-    await prisma.produk.update({
-      where: { id },
-      data: { nama, hargaModal, stok, supplierId: supplier },
+    await prisma.$transaction(async (tx) => {
+      const before = await tx.produk.findUnique({ where: { id }, select: { stok: true } });
+      await tx.produk.update({
+        where: { id },
+        data: { nama, hargaModal, stok, supplierId: supplier },
+      });
+      if (before) await kasStokNaik(tx, { nama, tambah: stok - before.stok, hargaModal });
     });
     return ok({ id });
   }
 
   const delta = stok - stokAwal;
-  const res = await prisma.produk.updateMany({
-    // A negative delta must not drive stok below zero if orders consumed
-    // stock since the form was opened.
-    where: { id, ...(delta < 0 ? { stok: { gte: -delta } } : {}) },
-    data: {
-      nama,
-      hargaModal,
-      supplierId: supplier,
-      ...(delta !== 0 ? { stok: { increment: delta } } : {}),
-    },
+  const res = await prisma.$transaction(async (tx) => {
+    const r = await tx.produk.updateMany({
+      // A negative delta must not drive stok below zero if orders consumed
+      // stock since the form was opened.
+      where: { id, ...(delta < 0 ? { stok: { gte: -delta } } : {}) },
+      data: {
+        nama,
+        hargaModal,
+        supplierId: supplier,
+        ...(delta !== 0 ? { stok: { increment: delta } } : {}),
+      },
+    });
+    if (r.count > 0) await kasStokNaik(tx, { nama, tambah: delta, hargaModal });
+    return r;
   });
   if (res.count === 0) {
     const exists = await prisma.produk.findUnique({ where: { id }, select: { stok: true } });

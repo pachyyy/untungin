@@ -80,3 +80,11 @@ export function revalidateStrukWrite() {
   revalidatePath("/settings/struk");
   revalidatePath("/pesanan");
 }
+
+/** setSaldo / tarikSaldo / transferKas — the balances show on the dashboard
+ * and in Pengaturan → Keuangan (plus its Riwayat page). */
+export function revalidateKasPaths() {
+  revalidatePath("/dashboard");
+  revalidatePath("/settings");
+  revalidatePath("/settings/kas");
+}

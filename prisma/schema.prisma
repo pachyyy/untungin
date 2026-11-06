@@ -153,6 +153,10 @@ model Pembayaran {
   createdByDeviceId String?
   createdByDevice   Device? @relation(fields: [createdByDeviceId], references: [id], onDelete: SetNull)
 
+  // Money-ledger rows this payment produced (modal/saldo split) — cascade so
+  // deleting the payment (or its order) reverses its own effect.
+  kasMutasi KasMutasi[]
+
   @@index([pesananId, tanggal])
   @@index([createdByDeviceId])
 }
@@ -225,4 +229,34 @@ model StrukSetting {
   tampilkanStempel       Boolean  @default(true) // LUNAS / BELUM LUNAS stamp
   tampilkanKomponenPaket Boolean  @default(true) // list what's inside each paket
   updatedAt              DateTime @updatedAt
+}
+
+// Singleton: exists once the owner has entered the starting balances.
+// KasMutasi rows are only written from then on (nothing before is counted).
+model KasSetting {
+  id         String   @id @default("default")
+  aktifSejak DateTime @default(now())
+}
+
+// Money ledger for the two accounts the owner tracks, "modal" (cash available
+// to buy stock) and "saldo" (accumulated keuntungan). Balance = sum(jumlah)
+// per akun. `jumlah` is signed (+ in, - out). The rows are the source of
+// truth — lib/services/kas.ts is the only writer.
+//
+// jenis: awal | bayar | batal | restock | produk_baru | stok_naik | tarik |
+//        transfer | penyesuaian
+model KasMutasi {
+  id           String      @id @default(cuid())
+  akun         String // "modal" | "saldo"
+  jumlah       Int
+  jenis        String
+  catatan      String? // human label written at insert time ("Pembayaran — Budi")
+  tanggal      DateTime    @default(now())
+  createdAt    DateTime    @default(now())
+  // Set for "bayar" and its "batal" reversal; cascades with the payment.
+  pembayaranId String?
+  pembayaran   Pembayaran? @relation(fields: [pembayaranId], references: [id], onDelete: Cascade)
+
+  @@index([tanggal, createdAt])
+  @@index([pembayaranId])
 }

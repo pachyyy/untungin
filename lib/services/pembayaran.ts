@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { totalPesanan, STATUS_RANK } from "@/lib/calc";
 import { parseIntField } from "@/lib/parse";
 import { parseDateOnlyJakarta } from "@/lib/date";
+import { kasPembayaran } from "@/lib/services/kas";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 
 /**
@@ -80,6 +81,7 @@ export async function tambahPembayaran(
     });
     createdId = created.id;
     await recomputeStatus(tx, pesananId, false);
+    await kasPembayaran(tx, { pembayaranId: created.id, pesananId, jumlah, tanggal });
   });
 
   return ok({ id: createdId });

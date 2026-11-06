@@ -2,18 +2,24 @@ import Link from "next/link";
 import { LogOut, Receipt } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { getStrukSetting } from "@/lib/services/struk";
+import { getKas } from "@/lib/services/kas";
 import { logoutAction } from "@/lib/actions/auth";
 import { listDevices } from "@/lib/services/devices";
 import { formatTanggal } from "@/lib/format";
 import { ThemeToggle } from "./ThemeToggle";
 import { DesignModeToggle } from "./DesignModeToggle";
 import { PerangkatManager } from "./PerangkatManager";
+import { KeuanganManager } from "./KeuanganManager";
 
 export const metadata = { title: "Pengaturan · Untungin" };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const [devicesResult, struk] = await Promise.all([listDevices(), getStrukSetting()]);
+  const [devicesResult, struk, kas] = await Promise.all([
+    listDevices(),
+    getStrukSetting(),
+    getKas(),
+  ]);
   const devices = devicesResult.ok ? devicesResult.data : [];
 
   return (
@@ -31,6 +37,17 @@ export default async function SettingsPage() {
           </p>
         </div>
         <DesignModeToggle />
+      </div>
+
+      <div className="glass-panel space-y-4 rounded-[20px] p-5">
+        <div>
+          <h2 className="text-display font-bold text-glass-ink">Keuangan</h2>
+          <p className="text-sm text-glass-ink-dim">
+            Modal (uang untuk belanja stok) dan saldo keuntungan, dihitung otomatis dari
+            pembayaran dan restock.
+          </p>
+        </div>
+        <KeuanganManager kas={kas} />
       </div>
 
       <div className="glass-panel space-y-4 rounded-[20px] p-5">

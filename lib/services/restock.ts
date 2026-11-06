@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseIntField } from "@/lib/parse";
 import { parseDateOnlyJakarta } from "@/lib/date";
+import { kasRestock } from "@/lib/services/kas";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 
 export type RestockInput = {
@@ -34,7 +35,7 @@ export async function restockProduk(
 
   const produk = await prisma.produk.findUnique({
     where: { id: produkId },
-    select: { id: true },
+    select: { id: true, nama: true },
   });
   if (!produk) return fail("Produk tidak ditemukan.", 404);
 
@@ -50,6 +51,7 @@ export async function restockProduk(
           "stok" = "stok" + ${qty},
           "updatedAt" = now()
       WHERE "id" = ${produkId}`;
+    await kasRestock(tx, { nama: produk.nama, qty, hargaBeli, tanggal });
     return tx.restock.create({
       data: { produkId, qty, hargaBeli, tanggal },
     });

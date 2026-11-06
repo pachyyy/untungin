@@ -5,7 +5,7 @@ import { getDashboardData } from "@/lib/services/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { untung, omzet, nilaiStok, pendingCount, pendingOmzet, stokMenipis } =
+  const { untung, omzet, nilaiStok, pendingOmzet, modal, saldoKeuntungan } =
     await getDashboardData();
 
   return (
@@ -19,12 +19,7 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="glass-panel rounded-[20px] p-4">
-          <p className="text-display text-xs font-medium text-glass-ink-dim">Omzet bulan ini</p>
-          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
-            {formatRupiah(omzet)}
-          </p>
-        </div>
+        <KasCard label="Modal" value={modal} />
         <div className="glass-panel rounded-[20px] p-4">
           <p className="text-display text-xs font-medium text-glass-ink-dim">Nilai Stok (HPP)</p>
           <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
@@ -32,8 +27,10 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="glass-panel rounded-[20px] p-4">
-          <p className="text-display text-xs font-medium text-glass-ink-dim">Pesanan pending</p>
-          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">{pendingCount}</p>
+          <p className="text-display text-xs font-medium text-glass-ink-dim">Omzet bulan ini</p>
+          <p className="text-data mt-1 text-[20px] font-extrabold text-glass-ink">
+            {formatRupiah(omzet)}
+          </p>
         </div>
         <div className="glass-panel rounded-[20px] p-4">
           <p className="text-display text-xs font-medium text-glass-ink-dim">Belum dibayar</p>
@@ -41,64 +38,43 @@ export default async function DashboardPage() {
             {formatRupiah(pendingOmzet)}
           </p>
         </div>
+        <KasCard label="Saldo Keuntungan" value={saldoKeuntungan} className="col-span-2" />
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Link
-          href="/pesanan?new=1"
-          className="brutal-interactive glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
-        >
-          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-glass-accent/15 text-glass-accent">
-            <PlusIcon />
-          </span>
-          <span className="text-display font-bold text-glass-ink">Tambah Pesanan</span>
-        </Link>
-        <Link
-          href="/produk?new=1"
-          className="brutal-interactive glass-panel flex items-center gap-3 rounded-[20px] p-4 transition active:scale-[0.98]"
-        >
-          <span className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[12px] bg-glass-success/15 text-glass-success">
-            <PlusIcon />
-          </span>
-          <span className="text-display font-bold text-glass-ink">Tambah Produk</span>
-        </Link>
-      </div>
-
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h2 className="text-display font-bold text-glass-ink">Stok menipis</h2>
-          <Link href="/produk" className="text-display text-sm font-semibold text-glass-accent">
-            Lihat semua
-          </Link>
-        </div>
-        {stokMenipis.length === 0 ? (
-          <div className="glass-panel rounded-[20px] p-4 text-center text-sm text-glass-ink-dim">
-            Semua stok aman
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {stokMenipis.map((p) => (
-              <div
-                key={p.id}
-                className="glass-panel flex items-center justify-between rounded-[20px] border-l-[3px] border-l-glass-warning py-3 pl-3.5 pr-4"
-              >
-                <span className="font-medium text-glass-ink">{p.nama}</span>
-                <span className="badge-warning text-data rounded-full bg-glass-warning/15 px-2.5 py-1 text-sm font-bold text-glass-warning">
-                  Sisa {p.stok}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
     </div>
   );
 }
 
-function PlusIcon() {
+/** Modal / Saldo Keuntungan — null until the owner has entered starting
+ * balances, in which case the card points at where to do that. A negative
+ * balance is shown in red (allowed on purpose; it means an entry is off). */
+function KasCard({
+  label,
+  value,
+  className = "",
+}: {
+  label: string;
+  value: number | null;
+  className?: string;
+}) {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-      <path d="M12 5v14M5 12h14" />
-    </svg>
+    <div className={`glass-panel rounded-[20px] p-4 ${className}`}>
+      <p className="text-display text-xs font-medium text-glass-ink-dim">{label}</p>
+      {value === null ? (
+        <Link
+          href="/settings"
+          className="mt-1 block text-sm font-semibold text-glass-accent"
+        >
+          Belum diatur · isi di Pengaturan
+        </Link>
+      ) : (
+        <p
+          className={`text-data mt-1 text-[20px] font-extrabold ${
+            value < 0 ? "text-glass-danger" : "text-glass-ink"
+          }`}
+        >
+          {formatRupiah(value)}
+        </p>
+      )}
+    </div>
   );
 }

@@ -225,7 +225,14 @@ export function serializeDashboard(d: DashboardData, role: DeviceRole) {
     stokMenipis: d.stokMenipis,
   };
   if (role !== "owner") return base;
-  return { ...base, untung: d.untung, omzet: d.omzet, nilaiStok: d.nilaiStok };
+  return {
+    ...base,
+    untung: d.untung,
+    omzet: d.omzet,
+    nilaiStok: d.nilaiStok,
+    modal: d.modal,
+    saldoKeuntungan: d.saldoKeuntungan,
+  };
 }
 
 // --------------------------------------------------------------- Laporan

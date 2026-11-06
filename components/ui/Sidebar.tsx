@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { NAV_ITEMS, isNavItemActive } from "@/lib/nav";
+import { VISIBLE_NAV_ITEMS, isNavItemActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 export function Sidebar() {
@@ -21,7 +21,7 @@ export function Sidebar() {
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
-          {NAV_ITEMS.map((item) => {
+          {VISIBLE_NAV_ITEMS.map((item) => {
             const active = isNavItemActive(pathname, item.href);
             return (
               <Link
