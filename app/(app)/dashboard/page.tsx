@@ -5,7 +5,7 @@ import { getDashboardData } from "@/lib/services/dashboard";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
-  const { untung, omzet, nilaiStok, pendingOmzet, modal, saldoKeuntungan } =
+  const { untung, omzet, nilaiStok, pendingOmzet, modal, saldoKeuntungan, rekening, tunai } =
     await getDashboardData();
 
   return (
@@ -39,6 +39,10 @@ export default async function DashboardPage() {
           </p>
         </div>
         <KasCard label="Saldo Keuntungan" value={saldoKeuntungan} className="col-span-2" />
+        {/* Where the money above physically sits — the two add up to
+            Modal + Saldo Keuntungan when the books are in line. */}
+        <KasCard label="Rekening" value={rekening} />
+        <KasCard label="Tunai" value={tunai} />
       </div>
     </div>
   );

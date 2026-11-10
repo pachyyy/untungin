@@ -25,6 +25,10 @@ export type DashboardData = {
    * starting balances in Pengaturan → Keuangan. */
   modal: number | null;
   saldoKeuntungan: number | null;
+  /** Where that money physically sits; null until the owner has entered the
+   * Rekening/Tunai balances (Pengaturan → Keuangan → Cocokkan kantong). */
+  rekening: number | null;
+  tunai: number | null;
 };
 
 export async function getDashboardData(): Promise<DashboardData> {
@@ -77,5 +81,7 @@ export async function getDashboardData(): Promise<DashboardData> {
     stokMenipis: stokMenipis.map((p) => ({ id: p.id, nama: p.nama, stok: p.stok })),
     modal: kas.aktif ? kas.modal : null,
     saldoKeuntungan: kas.aktif ? kas.saldo : null,
+    rekening: kas.kantongAktif ? kas.rekening : null,
+    tunai: kas.kantongAktif ? kas.tunai : null,
   };
 }

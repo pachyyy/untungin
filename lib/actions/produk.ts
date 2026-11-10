@@ -3,6 +3,7 @@
 import type { ActionResult } from "@/lib/actions/supplier";
 import type { ServiceResult } from "@/lib/services/types";
 import * as produkService from "@/lib/services/produk";
+import { readSumber } from "@/lib/actions/sumber";
 import { revalidateProdukWrite, revalidateProdukDelete } from "@/lib/services/revalidate";
 
 function toActionResult(r: ServiceResult<unknown>): ActionResult {
@@ -17,6 +18,7 @@ function readProdukForm(formData: FormData) {
     supplierId: String(formData.get("supplierId") ?? ""),
     supplierNama: String(formData.get("supplierNama") ?? ""),
     supplierKontak: String(formData.get("supplierKontak") ?? ""),
+    sumber: readSumber(formData),
   };
 }
 

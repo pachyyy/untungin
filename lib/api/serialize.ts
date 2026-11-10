@@ -232,6 +232,8 @@ export function serializeDashboard(d: DashboardData, role: DeviceRole) {
     nilaiStok: d.nilaiStok,
     modal: d.modal,
     saldoKeuntungan: d.saldoKeuntungan,
+    rekening: d.rekening,
+    tunai: d.tunai,
   };
 }
 

@@ -104,7 +104,10 @@ const STATUS_PRIORITY: Record<string, number> = Object.fromEntries(
 // A payment's metode isn't constrained to this list server-side — an older
 // or hand-entered value can fall outside it and still displays fine, it just
 // won't be one of the selectable options going forward.
-const METODE_OPTIONS = ["Cash", "Transfer", "QRIS", "Lainnya"] as const;
+// Only these three are offered: the metode decides which pocket the money
+// lands in (Cash → Tunai, Transfer/QRIS → Rekening), so "Lainnya" / none would
+// leave the payment without a pocket.
+const METODE_OPTIONS = ["Cash", "Transfer", "QRIS"] as const;
 
 export function PesananManager({
   pesanan,
@@ -1231,7 +1234,7 @@ function PaymentModal({
   const sisa = Math.max(0, total - dibayar);
 
   const [tanggal, setTanggal] = useState(todayJakarta);
-  const [metode, setMetode] = useState("");
+  const [metode, setMetode] = useState<string>("Transfer");
   const [jumlah, setJumlah] = useState(() => String(sisa || ""));
   const [error, setError] = useState<string>();
 
@@ -1351,13 +1354,12 @@ function PaymentModal({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs">Metode (opsional)</Label>
+                  <Label className="text-xs">Metode</Label>
                   <select
                     value={metode}
                     onChange={(e) => setMetode(e.target.value)}
                     className="flex h-10 w-full rounded-[12px] border border-panel-border bg-glass-input px-3 text-sm text-glass-ink"
                   >
-                    <option value="">— Tanpa metode —</option>
                     {METODE_OPTIONS.map((m) => (
                       <option key={m} value={m}>
                         {m}
@@ -1374,6 +1376,9 @@ function PaymentModal({
                   value={jumlah}
                   onChange={(e) => setJumlah(e.target.value.replace(/[^0-9]/g, ""))}
                 />
+                <p className="mt-1 text-xs text-glass-ink-faint">
+                  Cash masuk ke Tunai · Transfer dan QRIS masuk ke Rekening.
+                </p>
               </div>
               {error && <p className="text-sm text-glass-danger">{error}</p>}
               <Button

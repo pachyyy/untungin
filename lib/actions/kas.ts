@@ -27,6 +27,22 @@ export async function tarikSaldoAction(formData: FormData): Promise<ActionResult
     await kasService.tarikSaldo({
       jumlah: formData.get("jumlah"),
       catatan: String(formData.get("catatan") ?? ""),
+      kantong: formData.get("kantong") ?? undefined,
+    })
+  );
+}
+
+export async function pindahKantongAction(formData: FormData): Promise<ActionResult> {
+  const arah =
+    String(formData.get("arah") ?? "") === "tunai_ke_rekening" ? "tunai_ke_rekening" : "rekening_ke_tunai";
+  return toActionResult(await kasService.pindahKantong({ arah, jumlah: formData.get("jumlah") }));
+}
+
+export async function setKantongAction(formData: FormData): Promise<ActionResult> {
+  return toActionResult(
+    await kasService.setKantong({
+      rekening: formData.get("rekening"),
+      tunai: formData.get("tunai"),
     })
   );
 }

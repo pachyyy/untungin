@@ -9,6 +9,14 @@ import { Combobox } from "@/components/ui/Combobox";
 import { Modal } from "@/components/ui/Modal";
 import { SearchInput } from "@/components/ui/SearchInput";
 import { useToast } from "@/components/ui/Toast";
+import {
+  SumberDana,
+  SUMBER_DEFAULT,
+  SUMBER_KOSONG,
+  appendSumber,
+  resolveSumber,
+  type SumberValue,
+} from "@/components/ui/SumberDana";
 import { formatRupiah } from "@/lib/format";
 import { todayJakarta } from "@/lib/date";
 import { cn } from "@/lib/utils";
@@ -38,10 +46,14 @@ export function ProdukManager({
   produk,
   suppliers,
   openNew,
+  kasAktif,
 }: {
   produk: ProdukRow[];
   suppliers: Supplier[];
   openNew: boolean;
+  /** Whether the money ledger is on — only then does a stock purchase ask
+   * which pocket (Rekening/Tunai) it was paid from. */
+  kasAktif: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -255,6 +267,7 @@ export function ProdukManager({
         onClose={() => setFormOpen(false)}
         editing={editing}
         suppliers={suppliers}
+        kasAktif={kasAktif}
         onDone={() => {
           setFormOpen(false);
           router.refresh();
@@ -274,6 +287,7 @@ export function ProdukManager({
       <RestockModal
         key={restocking?.id}
         row={restocking}
+        kasAktif={kasAktif}
         onClose={() => setRestocking(null)}
         onDone={() => {
           setRestocking(null);
@@ -314,17 +328,42 @@ function ProdukFormModal({
   onClose,
   editing,
   suppliers,
+  kasAktif,
   onDone,
 }: {
   open: boolean;
   onClose: () => void;
   editing: ProdukRow | null;
   suppliers: Supplier[];
+  kasAktif: boolean;
   onDone: () => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string>();
   const { toast } = useToast();
+  // Stok and harga modal are controlled so the purchase total (and with it the
+  // Rekening/Tunai picker) follows what is typed.
+  const [stokStr, setStokStr] = useState(String(editing?.stok ?? 0));
+  const [hargaStr, setHargaStr] = useState(editing ? String(editing.hargaModal) : "");
+  // New product: assume it was just bought (default Rekening). Stok raise on an
+  // existing one: no default, because it may equally be a count correction.
+  const [sumber, setSumber] = useState<SumberValue>(editing ? SUMBER_KOSONG : SUMBER_DEFAULT);
+
+  // The modal component outlives each open, so start every open from the row's
+  // current values instead of whatever the last open left behind.
+  useEffect(() => {
+    if (!open) return;
+    setStokStr(String(editing?.stok ?? 0));
+    setHargaStr(editing ? String(editing.hargaModal) : "");
+    setSumber(editing ? SUMBER_KOSONG : SUMBER_DEFAULT);
+    setError(undefined);
+  }, [open, editing]);
+
+  const stokNum = Math.floor(Number(stokStr)) || 0;
+  const hargaNum = Math.floor(Number(hargaStr)) || 0;
+  const tambahStok = editing ? stokNum - editing.stok : stokNum;
+  const totalBeli = tambahStok > 0 && hargaNum > 0 ? tambahStok * hargaNum : 0;
+  const showSumber = kasAktif && totalBeli > 0;
   const [supplierId, setSupplierId] = useState(
     editing?.supplierId ?? suppliers[0]?.id ?? "__new__"
   );
@@ -333,12 +372,18 @@ function ProdukFormModal({
 
   function handleSubmit(formData: FormData) {
     setError(undefined);
+    if (showSumber) {
+      const r = resolveSumber(totalBeli, sumber);
+      if (r.error) return setError(r.error);
+      appendSumber(formData, totalBeli, sumber);
+    }
     startTransition(async () => {
       const res = editing
         ? await updateProduk(formData)
         : await createProduk(formData);
       if (res.ok) {
         toast(editing ? "Produk berhasil diperbarui." : "Produk berhasil ditambahkan.");
+        setSumber(editing ? SUMBER_KOSONG : SUMBER_DEFAULT);
         onDone();
       } else setError(res.error);
     });
@@ -372,7 +417,8 @@ function ProdukFormModal({
               id="hargaModal"
               name="hargaModal"
               inputMode="numeric"
-              defaultValue={editing?.hargaModal}
+              value={hargaStr}
+              onChange={(e) => setHargaStr(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="50000"
               required
             />
@@ -383,7 +429,8 @@ function ProdukFormModal({
               id="stok"
               name="stok"
               inputMode="numeric"
-              defaultValue={editing?.stok ?? 0}
+              value={stokStr}
+              onChange={(e) => setStokStr(e.target.value.replace(/[^0-9]/g, ""))}
               placeholder="0"
             />
           </div>
@@ -391,6 +438,16 @@ function ProdukFormModal({
         <p className="text-xs text-glass-ink-faint">
           Harga jual diisi saat membuat pesanan.
         </p>
+
+        {showSumber && (
+          <SumberDana
+            total={totalBeli}
+            value={sumber}
+            onChange={setSumber}
+            label={editing ? "Stok bertambah — dibeli dari" : "Stok awal dibayar dari"}
+            tanpaLabel={editing ? "Koreksi stok" : "Sudah dimiliki"}
+          />
+        )}
 
         <div>
           <Label>Supplier</Label>
@@ -525,10 +582,12 @@ function DeleteModal({
 
 function RestockModal({
   row,
+  kasAktif,
   onClose,
   onDone,
 }: {
   row: ProdukRow | null;
+  kasAktif: boolean;
   onClose: () => void;
   onDone: () => void;
 }) {
@@ -538,9 +597,14 @@ function RestockModal({
   const [qty, setQty] = useState("");
   const [hargaBeli, setHargaBeli] = useState(() => String(row?.hargaModal ?? ""));
   const [error, setError] = useState<string>();
+  const [sumber, setSumber] = useState<SumberValue>(SUMBER_DEFAULT);
 
   const qtyNum = Math.floor(Number(qty));
   const hargaBeliNum = Math.floor(Number(hargaBeli));
+  const totalBeli =
+    Number.isFinite(qtyNum) && qtyNum > 0 && Number.isFinite(hargaBeliNum) && hargaBeliNum > 0
+      ? qtyNum * hargaBeliNum
+      : 0;
   const preview =
     row && Number.isFinite(qtyNum) && qtyNum > 0 && Number.isFinite(hargaBeliNum) && hargaBeliNum > 0
       ? {
@@ -564,6 +628,11 @@ function RestockModal({
     fd.set("qty", String(qtyNum));
     fd.set("hargaBeli", String(hargaBeliNum));
     fd.set("tanggal", tanggal);
+    if (kasAktif) {
+      const r = resolveSumber(totalBeli, sumber);
+      if (r.error) return setError(r.error);
+      appendSumber(fd, totalBeli, sumber);
+    }
     startTransition(async () => {
       const res = await restockProduk(fd);
       if (res.ok) {
@@ -617,6 +686,10 @@ function RestockModal({
               placeholder="0"
             />
           </div>
+
+          {kasAktif && totalBeli > 0 && (
+            <SumberDana total={totalBeli} value={sumber} onChange={setSumber} />
+          )}
 
           {preview && (
             <div className="flex justify-between rounded-[14px] bg-glass-accent/10 px-3 py-2 text-sm text-glass-accent">

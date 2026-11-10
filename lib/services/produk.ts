@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { parseIntField } from "@/lib/parse";
-import { kasProdukBaru, kasStokNaik } from "@/lib/services/kas";
+import { kasProdukBaru, kasStokNaik, pembagianBeli, type SumberDana } from "@/lib/services/kas";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 
 const produkListInclude = {
@@ -31,6 +31,11 @@ export type ProdukFormInput = {
   /** Only read when supplierId === "__new__". */
   supplierNama?: string;
   supplierKontak?: string;
+  /** How the opening stock (create) or the stok increase (update) was paid —
+   * a Rekening/Tunai split, or `tanpaKas` when it was already owned / is only
+   * a count correction. Omitted by clients that predate pockets: the stock
+   * still reduces modal, just without a pocket. */
+  sumber?: SumberDana;
 };
 
 async function resolveSupplierId(
@@ -65,11 +70,15 @@ export async function createProduk(
   const supplier = await resolveSupplierId(input);
   if (typeof supplier !== "string") return fail(supplier.error);
 
+  // Validated before the transaction so a bad split changes nothing.
+  const pembagian = pembagianBeli(stok * hargaModal, input.sumber);
+  if (!pembagian.ok) return fail(pembagian.error);
+
   const created = await prisma.$transaction(async (tx) => {
     const row = await tx.produk.create({
       data: { nama, hargaModal, stok, supplierId: supplier },
     });
-    await kasProdukBaru(tx, { nama, stok, hargaModal });
+    await kasProdukBaru(tx, { nama, stok, hargaModal, pembagian: pembagian.data });
     return row;
   });
   return ok({ id: created.id });
@@ -118,6 +127,10 @@ export async function updateProduk(
   }
 
   const delta = stok - stokAwal;
+  // Only a raise buys anything; lowering is a correction (see kasStokNaik).
+  const pembagian = delta > 0 ? pembagianBeli(delta * hargaModal, input.sumber) : null;
+  if (pembagian && !pembagian.ok) return fail(pembagian.error);
+
   const res = await prisma.$transaction(async (tx) => {
     const r = await tx.produk.updateMany({
       // A negative delta must not drive stok below zero if orders consumed
@@ -130,7 +143,14 @@ export async function updateProduk(
         ...(delta !== 0 ? { stok: { increment: delta } } : {}),
       },
     });
-    if (r.count > 0) await kasStokNaik(tx, { nama, tambah: delta, hargaModal });
+    if (r.count > 0) {
+      await kasStokNaik(tx, {
+        nama,
+        tambah: delta,
+        hargaModal,
+        pembagian: pembagian?.ok ? pembagian.data : undefined,
+      });
+    }
     return r;
   });
   if (res.count === 0) {

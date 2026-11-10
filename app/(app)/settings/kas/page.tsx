@@ -6,7 +6,8 @@ import { formatRupiah, formatTanggal } from "@/lib/format";
 export const metadata = { title: "Riwayat Keuangan · Untungin" };
 export const dynamic = "force-dynamic";
 
-const AKUN_LABEL: Record<string, string> = { modal: "Modal", saldo: "Saldo" };
+const AKUN_LABEL: Record<string, string> = { modal: "Modal", saldo: "Saldo", kantong: "Posisi uang" };
+const KANTONG_LABEL: Record<string, string> = { rekening: "Rekening", tunai: "Tunai" };
 
 export default async function RiwayatKasPage() {
   const result = await listMutasi({ limit: 200 });
@@ -26,7 +27,8 @@ export default async function RiwayatKasPage() {
         <div>
           <h2 className="text-display font-bold text-glass-ink">Riwayat mutasi</h2>
           <p className="text-sm text-glass-ink-dim">
-            Setiap uang masuk dan keluar di Modal dan Saldo Keuntungan.
+            Setiap uang masuk dan keluar di Modal dan Saldo Keuntungan, beserta Rekening atau
+            Tunai-nya.
           </p>
         </div>
         {items.length === 0 ? (
@@ -44,6 +46,7 @@ export default async function RiwayatKasPage() {
                   <p className="truncate text-sm text-glass-ink">{m.catatan ?? m.jenis}</p>
                   <p className="text-xs text-glass-ink-faint">
                     {formatTanggal(m.tanggal)} · {AKUN_LABEL[m.akun] ?? m.akun}
+                    {m.kantong ? ` · ${KANTONG_LABEL[m.kantong] ?? m.kantong}` : ""}
                   </p>
                 </div>
                 <span

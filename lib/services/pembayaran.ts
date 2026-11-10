@@ -81,7 +81,7 @@ export async function tambahPembayaran(
     });
     createdId = created.id;
     await recomputeStatus(tx, pesananId, false);
-    await kasPembayaran(tx, { pembayaranId: created.id, pesananId, jumlah, tanggal });
+    await kasPembayaran(tx, { pembayaranId: created.id, pesananId, jumlah, tanggal, metode });
   });
 
   return ok({ id: createdId });

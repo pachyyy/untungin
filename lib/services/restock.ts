@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { parseIntField } from "@/lib/parse";
 import { parseDateOnlyJakarta } from "@/lib/date";
-import { kasRestock } from "@/lib/services/kas";
+import { kasRestock, pembagianBeli, type SumberDana } from "@/lib/services/kas";
 import { ok, fail, type ServiceResult, type Actor, WEB_ACTOR } from "@/lib/services/types";
 
 export type RestockInput = {
@@ -9,6 +9,9 @@ export type RestockInput = {
   qty: unknown;
   hargaBeli: unknown;
   tanggal: string;
+  /** How the purchase was paid (Rekening/Tunai split). Optional: clients that
+   * predate pockets omit it and the purchase just carries no pocket. */
+  sumber?: SumberDana;
 };
 
 /**
@@ -39,6 +42,10 @@ export async function restockProduk(
   });
   if (!produk) return fail("Produk tidak ditemukan.", 404);
 
+  // Validated before the transaction so a bad split changes nothing.
+  const pembagian = pembagianBeli(qty * hargaBeli, input.sumber);
+  if (!pembagian.ok) return fail(pembagian.error);
+
   // One atomic UPDATE: Postgres evaluates every SET expression against the
   // row's values *before* this statement, so the weighted average and the
   // increment both see the same, current stok. Reading stok first and
@@ -51,7 +58,13 @@ export async function restockProduk(
           "stok" = "stok" + ${qty},
           "updatedAt" = now()
       WHERE "id" = ${produkId}`;
-    await kasRestock(tx, { nama: produk.nama, qty, hargaBeli, tanggal });
+    await kasRestock(tx, {
+      nama: produk.nama,
+      qty,
+      hargaBeli,
+      tanggal,
+      pembagian: pembagian.data,
+    });
     return tx.restock.create({
       data: { produkId, qty, hargaBeli, tanggal },
     });

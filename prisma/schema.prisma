@@ -236,6 +236,10 @@ model StrukSetting {
 model KasSetting {
   id         String   @id @default("default")
   aktifSejak DateTime @default(now())
+  // Set the first time the owner enters the Rekening/Tunai balances
+  // (setKantong). Null = the pocket view isn't set up yet, so the UI asks for
+  // it instead of showing meaningless zeros.
+  kantongAktifSejak DateTime?
 }
 
 // Money ledger for the two accounts the owner tracks, "modal" (cash available
@@ -244,10 +248,18 @@ model KasSetting {
 // truth — lib/services/kas.ts is the only writer.
 //
 // jenis: awal | bayar | batal | restock | produk_baru | stok_naik | tarik |
-//        transfer | penyesuaian
+//        transfer | penyesuaian | pindah_kantong | kantong_awal | kantong_sesuai
+//
+// `kantong` is a second, independent dimension: where the physical money sits,
+// "rekening" or "tunai". A row with a kantong also counts toward that pocket's
+// balance (sum(jumlah) per kantong). Rows with akun "kantong" (moving cash
+// between pockets, or reconciling a pocket against reality) touch ONLY the
+// pocket and are ignored by the modal/saldo sums. kantong is null on rows
+// written before this existed or by clients that don't send it.
 model KasMutasi {
   id           String      @id @default(cuid())
-  akun         String // "modal" | "saldo"
+  akun         String // "modal" | "saldo" | "kantong"
+  kantong      String? // "rekening" | "tunai"
   jumlah       Int
   jenis        String
   catatan      String? // human label written at insert time ("Pembayaran — Budi")

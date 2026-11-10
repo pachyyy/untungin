@@ -10,9 +10,14 @@ export async function POST(req: Request) {
 
   const body = await readJsonBody(req);
   if (!body || typeof body !== "object") return jsonError("Body permintaan tidak valid.", 400);
-  const { jumlah, catatan } = body as Record<string, unknown>;
+  const { jumlah, catatan, kantong } = body as Record<string, unknown>;
 
-  const result = await tarikSaldo({ jumlah, catatan: typeof catatan === "string" ? catatan : "" });
+  // `kantong` is optional so older APKs (which don't send it) keep working.
+  const result = await tarikSaldo({
+    jumlah,
+    catatan: typeof catatan === "string" ? catatan : "",
+    kantong,
+  });
   if (result.ok) revalidateKasPaths();
   return fromServiceResult(result);
 }

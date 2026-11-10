@@ -18,6 +18,8 @@ export function revalidatePesananPaths() {
   revalidatePath("/produk");
   revalidatePath("/laporan");
   revalidatePath("/pelanggan");
+  revalidatePath("/settings");
+  revalidatePath("/settings/kas");
 }
 
 export function revalidatePembayaranPaths() {
@@ -25,13 +27,18 @@ export function revalidatePembayaranPaths() {
   revalidatePath("/dashboard");
   revalidatePath("/laporan");
   revalidatePath("/pelanggan");
+  revalidatePath("/settings");
+  revalidatePath("/settings/kas");
 }
 
-/** createProduk / updateProduk. */
+/** createProduk / updateProduk. (Pengaturan too: a stock purchase moves the
+ * Rekening/Tunai balances shown there.) */
 export function revalidateProdukWrite() {
   revalidatePath("/produk");
   revalidatePath("/dashboard");
   revalidatePath("/supplier");
+  revalidatePath("/settings");
+  revalidatePath("/settings/kas");
 }
 
 /** deleteProduk. */
@@ -45,6 +52,8 @@ export function revalidateProdukDelete() {
 export function revalidateRestockPaths() {
   revalidatePath("/produk");
   revalidatePath("/dashboard");
+  revalidatePath("/settings");
+  revalidatePath("/settings/kas");
 }
 
 /** createSupplier / updateSupplier. */
